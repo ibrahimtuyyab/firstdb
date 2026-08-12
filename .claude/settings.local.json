@@ -4,7 +4,15 @@
       "Bash(node -e ' *)",
       "Bash(node migrate-roles.js)",
       "Bash(ps -eo pid,etime,cmd)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(~/.local/bin/gh auth *)",
+      "Bash(rm -f /tmp/claude-1000/-home-teczon-firstdb/dfd668df-6ada-4a81-979b-bdcba6468959/scratchpad/ghauth.log)",
+      "Bash(BROWSER=true nohup ~/.local/bin/gh auth login --hostname github.com --git-protocol https --web)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(break)",
+      "Bash(read -t 2)",
+      "Bash(~/.local/bin/gh repo *)",
+      "Bash(~/.local/bin/gh api *)"
     ]
   }
 }

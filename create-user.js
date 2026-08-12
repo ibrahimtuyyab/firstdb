@@ -7,7 +7,7 @@
 //   node create-user.js ali ali123 student 42
 require('dotenv').config();
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const ROLES = ['admin', 'teacher', 'student'];
 const [username, password, role, itemId] = process.argv.slice(2);

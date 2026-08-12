@@ -28,9 +28,27 @@ See `.env.example`. `.env` is gitignored — never commit real credentials.
 
 | Variable | Purpose |
 | --- | --- |
-| `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` | PostgreSQL connection |
+| `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` | PostgreSQL connection (local dev) |
+| `DATABASE_URL` | Hosted Postgres connection string; overrides the `DB_*` vars and enables TLS |
 | `PORT` | HTTP port for the server |
 | `JWT_SECRET` | Signing secret for auth tokens |
+| `SHARED_PASSWORD` | Shared login password for teachers and students |
+
+## Deploying to Vercel
+
+`vercel.json` rewrites `/api/*` to `api/index.js`, which re-exports the Express
+app; `public/` is served as static assets. `server.js` only calls `app.listen()`
+when run directly, so the same file works locally and as a serverless function.
+
+Before it will run you must:
+
+1. Provision a hosted Postgres (Neon, Supabase, or Vercel Postgres) — a
+   serverless function cannot reach `localhost`.
+2. Load your schema and data into it.
+3. Set `DATABASE_URL`, `JWT_SECRET`, and `SHARED_PASSWORD` in the Vercel
+   project's environment variables, then redeploy.
+
+Note that uploaded CSVs land in `/tmp` and do not persist between invocations.
 
 ## Scripts
 

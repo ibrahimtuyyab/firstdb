@@ -1,0 +1,7 @@
+node_modules
+uploads
+test-import.csv
+test-import-employees.csv
+server.js firstdb
+server.js ibrahim-db
+.claude

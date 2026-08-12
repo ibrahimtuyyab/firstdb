@@ -1,25 +1,41 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
-const upload = multer({ dest: 'uploads/' });
+const path = require('path');
+
+// On serverless the filesystem is read-only apart from /tmp.
+const upload = multer({ dest: process.env.VERCEL ? '/tmp' : 'uploads/' });
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+// Hosted Postgres (Neon, Supabase, Vercel Postgres) hands out a single
+// connection string and requires TLS; local dev still uses the DB_* vars.
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max: 1,
+      }
+    : {
+        user: process.env.DB_USER,
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASSWORD,
+        port: process.env.DB_PORT,
+      }
+);
+
+// A pool error must not take the whole process down.
+pool.on('error', (err) => console.error('pg pool error:', err.message));
 
 // ---------------------------------------------------------------- roles ----
 // admin   - username + password. Sees and edits everything.
@@ -458,5 +474,11 @@ app.delete('/api/items/all/confirm', requireAuth, requireRole(ROLES.ADMIN), asyn
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Serverless platforms import the app and drive it themselves, so only bind a
+// port when this file is run directly (`node server.js`).
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;

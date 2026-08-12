@@ -8,7 +8,7 @@
 //             sees only their own record
 require('dotenv').config();
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
   user: process.env.DB_USER,
