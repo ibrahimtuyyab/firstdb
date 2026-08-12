@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node migrate-roles.js)",
+      "Bash(ps -eo pid,etime,cmd)",
+      "Bash(python3 -)"
+    ]
+  }
+}

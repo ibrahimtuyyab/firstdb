@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directory — firstdb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#12181f; --panel:#1a222c; --panel-light:#212b37; --line:#2c3844;
+    --amber:#e8a33d; --amber-dim:#8a6a34; --text:#e9edf1; --text-dim:#8b98a5;
+    --good:#5fb488; --bad:#c9584f; --overlay:rgba(10,14,18,0.7);
+  }
+  [data-theme="light"]{
+    --ink:#f5f3ee; --panel:#ffffff; --panel-light:#f0ede6; --line:#e1dcd0;
+    --amber:#b5761f; --amber-dim:#e3c088; --text:#20241f; --text-dim:#6b6558;
+    --good:#3d8f64; --bad:#b5473d; --overlay:rgba(245,243,238,0.7);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink); color:var(--text); font-family:'Inter',sans-serif;
+    min-height:100vh; transition:background .2s ease, color .2s ease;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:48px 28px 80px;}
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1px solid var(--line); padding-bottom:24px; margin-bottom:24px;
+    flex-wrap:wrap; gap:16px;
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--amber); margin:0 0 6px;
+  }
+  h1{ font-family:'Space Grotesk',sans-serif; font-size:34px; font-weight:700; margin:0; letter-spacing:-0.01em; }
+  .subtitle{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text-dim); margin:8px 0 0; }
+  .header-right{ display:flex; align-items:center; gap:14px; }
+  .record-count{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-dim); text-align:right; }
+  .record-count strong{ color:var(--amber); font-size:20px; display:block; font-weight:500; }
+  .theme-toggle{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text); transition:border-color .15s ease;
+  }
+  .theme-toggle:hover{border-color:var(--amber-dim);}
+
+  .role-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:4px 9px; border-radius:999px;
+    border:1px solid var(--amber-dim); color:var(--amber);
+  }
+  .role-badge.admin{ background:rgba(232,163,61,0.12); }
+
+  .user-menu{ position:relative; }
+  .user-chip{
+    display:flex; align-items:center; gap:10px; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px; padding:7px 12px 7px 8px;
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; cursor:pointer;
+    color:var(--text); transition:border-color .15s ease;
+  }
+  .user-chip:hover{border-color:var(--amber-dim);}
+  .user-chip .avatar{
+    width:24px;height:24px;border-radius:50%; background:var(--amber); color:#1a1305;
+    display:flex;align-items:center;justify-content:center; font-family:'Inter',sans-serif;
+    font-weight:700; font-size:11px;
+  }
+  .user-chip svg{ color:var(--text-dim); }
+  .user-dropdown{
+    position:absolute; top:calc(100% + 8px); right:0;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    min-width:210px; overflow:hidden; box-shadow:0 12px 30px rgba(0,0,0,0.3);
+    display:none; z-index:50;
+  }
+  .user-dropdown.open{display:block;}
+  .user-dropdown .who{
+    padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+    color:var(--text-dim); border-bottom:1px solid var(--line);
+  }
+  .user-dropdown .who strong{ color:var(--text); display:block; font-family:'Inter',sans-serif; font-size:13.5px; margin-top:2px; }
+  .user-dropdown button{
+    width:100%; text-align:left; background:none; border:none; padding:11px 14px;
+    font-family:'Inter',sans-serif; font-size:13.5px; cursor:pointer;
+    display:flex; align-items:center; gap:8px; color:var(--text);
+  }
+  .user-dropdown button.logout-item{ color:var(--bad); }
+  .user-dropdown button.logout-item:hover{background:rgba(201,88,79,0.1);}
+  .user-dropdown button.danger-item{ color:var(--bad); border-top:1px solid var(--line); }
+  .user-dropdown button.danger-item:hover{background:rgba(201,88,79,0.1);}
+
+  /* students / employees switch */
+  .segmented{
+    display:inline-flex; gap:5px; background:var(--panel); border:1px solid var(--line);
+    border-radius:11px; padding:5px; margin-bottom:22px;
+  }
+  .seg{
+    background:none; border:none; border-radius:8px; padding:10px 18px;
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer;
+    color:var(--text-dim); display:flex; align-items:center; gap:9px;
+    transition:background .18s ease, color .18s ease;
+  }
+  .seg:hover{ color:var(--text); }
+  .seg.active{ background:var(--amber); color:#1a1305; }
+  .seg-count{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    background:var(--ink); color:var(--text-dim); border-radius:999px; padding:2px 8px;
+  }
+  .seg.active .seg-count{ background:rgba(26,19,5,0.18); color:#1a1305; }
+
+  .toolbar{ display:flex; gap:12px; margin-bottom:22px; flex-wrap:wrap; }
+  .search-box{ flex:1; min-width:220px; position:relative; }
+  .search-box input{
+    width:100%; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:13px 16px 13px 42px; color:var(--text); font-family:'Inter',sans-serif;
+    font-size:14.5px; outline:none; transition:border-color .15s ease;
+  }
+  .search-box input:focus{border-color:var(--amber-dim);}
+  .search-box input::placeholder{color:var(--text-dim);}
+  .search-icon{ position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--text-dim); pointer-events:none; }
+  .dept-filter, .sort-select{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:0 14px;
+    color:var(--text); font-family:'Inter',sans-serif; font-size:14.5px; cursor:pointer; outline:none;
+    height:42px;
+  }
+  .dept-lock{
+    display:flex; align-items:center; gap:8px; height:42px; padding:0 14px;
+    background:var(--panel); border:1px dashed var(--amber-dim); border-radius:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--amber);
+  }
+  .btn{
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:600; border-radius:8px;
+    padding:0 18px; cursor:pointer; border:1px solid transparent; transition:all .15s ease;
+    display:flex; align-items:center; gap:6px; white-space:nowrap; height:42px;
+  }
+  .btn-primary{ background:var(--amber); color:#1a1305; }
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.6; cursor:not-allowed;}
+  .btn-ghost{ background:var(--panel); color:var(--text); border-color:var(--line); }
+  .btn-ghost:hover{border-color:var(--amber-dim);}
+  .btn-danger{ background:transparent; color:var(--bad); border-color:transparent; }
+  .btn-danger:hover{background:rgba(201,88,79,0.12);}
+  .btn-destroy{ background:var(--bad); color:#fff; }
+  .btn-destroy:hover{filter:brightness(1.1);}
+
+  .status-line{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim);
+    margin-bottom:16px; display:flex; align-items:center; gap:8px;
+  }
+  .dot{ width:6px;height:6px;border-radius:50%; background:var(--good); display:inline-block; }
+  .dot.err{background:var(--bad);}
+  table{
+    width:100%; border-collapse:collapse; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; overflow:hidden;
+  }
+  thead th{
+    text-align:left; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim);
+    padding:14px 18px; border-bottom:1px solid var(--line); background:var(--panel-light);
+  }
+  tbody td{ padding:15px 18px; border-bottom:1px solid var(--line); font-size:14.5px; }
+  tbody tr{ cursor:pointer; transition:background .12s ease; }
+  tbody tr:hover{ background:var(--panel-light); }
+  tbody tr:last-child td{ border-bottom:none; }
+  .cell-id{ font-family:'IBM Plex Mono',monospace; color:var(--text-dim); font-size:13px; }
+  .cell-name{ font-weight:600; display:flex; align-items:center; gap:10px; }
+  .cell-name .av{
+    width:28px;height:28px;border-radius:50%; background:var(--amber-dim); color:var(--ink);
+    display:flex;align-items:center;justify-content:center; font-size:12px; font-weight:700; flex:none;
+  }
+  .cell-name .av.emp{ background:var(--amber); color:#1a1305; border-radius:8px; }
+  .cell-email{ color:var(--text-dim); font-size:13.5px; }
+  .pill{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--text-dim);
+  }
+  .empty{
+    padding:60px 20px; text-align:center; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  }
+  .empty svg{ margin-bottom:12px; opacity:.5; }
+
+  /* modals */
+  .overlay{
+    position:fixed; inset:0; background:var(--overlay); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:100;
+    overflow-y:auto;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:34px; width:100%; max-width:480px; box-shadow:0 30px 70px rgba(0,0,0,0.45);
+    margin:auto;
+  }
+  .modal.wide{ max-width:600px; }
+  .modal h2{ font-family:'Space Grotesk',sans-serif; font-size:22px; margin:0 0 6px; }
+  .modal p.sub{ color:var(--text-dim); font-size:13.5px; margin:0 0 22px; line-height:1.55; }
+  .modal .field{ margin-bottom:16px; }
+  .modal .row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .modal label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.07em; color:var(--text-dim); margin-bottom:7px;
+  }
+  .modal input, .modal select{
+    width:100%; background:var(--ink); border:1.5px solid var(--line); border-radius:8px;
+    padding:12px 14px; color:var(--text); font-family:'Inter',sans-serif; font-size:14.5px; outline:none;
+  }
+  .modal input:focus, .modal select:focus{border-color:var(--amber-dim);}
+  .modal input:disabled, .modal select:disabled{ opacity:.65; cursor:not-allowed; }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:24px; align-items:center; }
+  .modal-actions .spacer{ flex:1; }
+  .field-error{ color:var(--bad); font-size:12px; font-family:'IBM Plex Mono',monospace; margin-top:6px; display:none; }
+  .field-error.show{display:block;}
+  .note{
+    background:rgba(232,163,61,0.1); border:1px solid var(--amber-dim); border-radius:8px;
+    padding:11px 13px; font-size:12.5px; color:var(--text-dim); margin-bottom:20px; line-height:1.55;
+  }
+  .danger-note{
+    background:rgba(201,88,79,0.1); border:1px solid rgba(201,88,79,0.3); border-radius:8px;
+    padding:12px 14px; font-size:13px; color:var(--bad); margin-bottom:20px; line-height:1.5;
+  }
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:13px 20px; font-size:14px; box-shadow:0 14px 34px rgba(0,0,0,0.35);
+    display:flex; align-items:center; gap:9px; opacity:0; transition:all .3s cubic-bezier(0.16,1,0.3,1); z-index:200;
+  }
+  .toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+  .toast.good{ border-color:var(--good); color:var(--good); }
+  .toast.bad{ border-color:var(--bad); color:var(--bad); }
+
+  @media (max-width:720px){
+    .wrap{padding:32px 18px 60px;}
+    h1{font-size:26px;}
+    .hide-sm{display:none;}
+    .modal .row{ grid-template-columns:1fr; gap:0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="brand-eyebrow">firstdb</p>
+      <h1 id="pageTitle">Directory</h1>
+      <p class="subtitle" id="scopeLine"></p>
+    </div>
+    <div class="header-right">
+      <div class="record-count"><strong id="countNum">—</strong> <span id="countLabel">records</span></div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+      <div class="user-menu">
+        <button class="user-chip" id="userChip">
+          <span class="avatar" id="avatarLetter">?</span>
+          <span id="usernameLabel">—</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="who">
+            Signed in as
+            <strong id="dropdownUsername">—</strong>
+            <span class="role-badge" id="dropdownRole" style="margin-top:8px;">—</span>
+          </div>
+          <button class="danger-item" id="deleteAllBtn" style="display:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+            Delete all students
+          </button>
+          <button class="logout-item" id="logoutBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- students vs employees (admin only) -->
+  <div class="segmented" id="segmented" style="display:none;">
+    <button class="seg active" data-tab="students" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
+      Students <span class="seg-count" id="segStudentCount">—</span>
+    </button>
+    <button class="seg" data-tab="employees" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
+      Employees <span class="seg-count" id="segEmployeeCount">—</span>
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" id="searchInput" placeholder="Search name, email, roll no…">
+    </div>
+    <select class="dept-filter" id="deptFilter"><option value="">All departments</option></select>
+    <div class="dept-lock" id="deptLock" style="display:none;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <span id="deptLockLabel">—</span>
+    </div>
+    <select class="sort-select" id="sortSelect"></select>
+    <button class="btn btn-ghost" id="importBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+      Import CSV
+    </button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none;">
+    <button class="btn btn-primary" id="addBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span id="addBtnLabel">Add person</span>
+    </button>
+  </div>
+
+  <div class="status-line" id="statusLine"><span class="dot"></span><span id="statusText">Loading…</span></div>
+
+  <div id="tableHost"></div>
+</div>
+
+<!-- add student -->
+<div class="overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>Add a student</h2>
+    <p class="sub" id="modalSub">New records appear in the directory straight away.</p>
+    <form id="personForm">
+      <div class="field">
+        <label>Id no</label>
+        <input type="number" id="fieldId" required>
+        <p class="field-error" id="errorId"></p>
+      </div>
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="fieldName" required>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="fieldEmail" required>
+      </div>
+      <div class="field">
+        <label>Department</label>
+        <select id="fieldDept" required></select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Save student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- add / edit employee -->
+<div class="overlay" id="empOverlay">
+  <div class="modal wide">
+    <h2 id="empTitle">Add an employee</h2>
+    <p class="sub" id="empSub">Employee records are kept separately from student records.</p>
+    <div class="note">
+      The employee no and department are also this person's teacher login. They log in with those two plus the shared password.
+    </div>
+    <form id="empForm">
+      <div class="row">
+        <div class="field">
+          <label>Employee no</label>
+          <input type="text" id="empNo" placeholder="EMP-1006" required>
+        </div>
+        <div class="field">
+          <label>Department</label>
+          <select id="empDept" required></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" id="empName" required>
+        </div>
+        <div class="field">
+          <label>Designation</label>
+          <input type="text" id="empDesignation" placeholder="Lecturer">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="empEmail">
+        </div>
+        <div class="field">
+          <label>Contact no</label>
+          <input type="text" id="empContact">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Qualification</label>
+          <input type="text" id="empQualification" placeholder="MS Computer Science">
+        </div>
+        <div class="field">
+          <label>Joined on</label>
+          <input type="text" id="empJoined" placeholder="2021">
+        </div>
+      </div>
+      <p class="field-error" id="empError"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="empCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="empSaveBtn">Save employee</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- delete all students -->
+<div class="overlay" id="deleteAllOverlay">
+  <div class="modal">
+    <h2>Delete all students</h2>
+    <p class="sub">This removes every student record from the directory.</p>
+    <div class="danger-note">Employee records are not affected. This cannot be undone — enter your admin password to confirm.</div>
+    <form id="deleteAllForm">
+      <div class="field">
+        <label>Admin password</label>
+        <input type="password" id="confirmPassword" required>
+        <p class="field-error" id="deleteAllError"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="deleteAllCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-destroy" id="deleteAllConfirmBtn">Delete everything</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<script>
+  const API = window.location.origin + '/api';
+  const ITEMS_URL = API + '/items';
+  const TEACHERS_URL = API + '/teachers';
+
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  const displayName = localStorage.getItem('displayName') || '';
+  const myDept = localStorage.getItem('dept') || '';
+
+  // Only admins and teachers belong on this page.
+  if (!token) {
+    window.location.replace('login.html');
+  } else if (role === 'student') {
+    window.location.replace('student.html');
+  }
+
+  const isAdmin = role === 'admin';
+  const isTeacher = role === 'teacher';
+
+  const SORTS = {
+    students: [['id','Sort by id'],['name','Sort by name'],['dept','Sort by department'],['batch','Sort by batch']],
+    employees: [['employee_no','Sort by employee no'],['name','Sort by name'],['dept','Sort by department'],['designation','Sort by designation']]
+  };
+
+  let tab = 'students';
+  let students = [];
+  let employees = [];
+  let departments = [];
+
+  const authHeaders = () => ({ 'Authorization': 'Bearer ' + token });
+
+  function forceLogout(){
+    localStorage.clear();
+    window.location.replace('login.html');
+  }
+
+  function toast(message, kind){
+    const el = document.getElementById('toast');
+    document.getElementById('toastText').textContent = message;
+    el.className = 'toast show ' + (kind || '');
+    setTimeout(() => { el.className = 'toast ' + (kind || ''); }, 2600);
+  }
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- theme ----------
+  if (localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme','light');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme','dark'); }
+    else { document.documentElement.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); }
+  });
+
+  // ---------- header / role chrome ----------
+  document.getElementById('avatarLetter').textContent = (displayName || role || '?').charAt(0).toUpperCase();
+  document.getElementById('usernameLabel').textContent = displayName || role;
+  document.getElementById('dropdownUsername').textContent = displayName || role;
+
+  const roleBadge = document.getElementById('dropdownRole');
+  roleBadge.textContent = isAdmin ? 'Admin' : 'Teacher · ' + myDept;
+  if (isAdmin) roleBadge.classList.add('admin');
+
+  if (isTeacher) {
+    document.getElementById('deptFilter').style.display = 'none';
+    document.getElementById('deptLock').style.display = 'flex';
+    document.getElementById('deptLockLabel').textContent = myDept;
+  } else {
+    document.getElementById('segmented').style.display = 'inline-flex';
+    document.getElementById('deleteAllBtn').style.display = 'flex';
+  }
+
+  const userChip = document.getElementById('userChip');
+  const userDropdown = document.getElementById('userDropdown');
+  userChip.addEventListener('click', (e) => { e.stopPropagation(); userDropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => userDropdown.classList.remove('open'));
+  document.getElementById('logoutBtn').addEventListener('click', forceLogout);
+
+  // ---------- tabs ----------
+  function selectTab(name){
+    tab = name;
+    document.querySelectorAll('.seg').forEach(s => s.classList.toggle('active', s.dataset.tab === name));
+  }
+
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.addEventListener('click', () => {
+      selectTab(seg.dataset.tab);
+      window.location.hash = seg.dataset.tab === 'employees' ? 'employees' : '';
+      document.getElementById('searchInput').value = '';
+      applyTabChrome();
+      render();
+    });
+  });
+
+  // Coming back from an employee profile lands on the employees tab.
+  if (isAdmin && window.location.hash === '#employees') selectTab('employees');
+
+  // The employee profile links here filtered to their department.
+  const wantedDept = new URLSearchParams(window.location.search).get('dept');
+
+  function applyTabChrome(){
+    const onStudents = tab === 'students';
+
+    document.getElementById('pageTitle').textContent = isTeacher
+      ? myDept + ' students'
+      : (onStudents ? 'Student directory' : 'Employee directory');
+
+    document.getElementById('scopeLine').textContent = isTeacher
+      ? 'You are seeing the ' + myDept + ' department only'
+      : (onStudents ? 'Full access — every department' : 'Teaching and support staff records');
+
+    document.getElementById('countLabel').textContent = onStudents ? 'students' : 'employees';
+    document.getElementById('searchInput').placeholder = onStudents
+      ? 'Search name, email, roll no…'
+      : 'Search name, employee no, designation…';
+
+    document.getElementById('addBtnLabel').textContent = onStudents ? 'Add student' : 'Add employee';
+    document.getElementById('importBtn').title = onStudents
+      ? 'CSV columns: id, name, email, dept, father_name, contact_no, roll_no, class, batch'
+      : 'CSV columns: employee_no, name, dept, designation, email, contact_no, qualification, joined_on';
+
+    const sortSelect = document.getElementById('sortSelect');
+    sortSelect.innerHTML = SORTS[tab].map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+
+    const deptFilter = document.getElementById('deptFilter');
+    const source = onStudents ? students : employees;
+    const list = [...new Set(source.map(r => r.dept).filter(Boolean))].sort();
+    deptFilter.innerHTML = '<option value="">All departments</option>' +
+      list.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+    if (onStudents && wantedDept && list.includes(wantedDept)) deptFilter.value = wantedDept;
+  }
+
+  // ---------- load ----------
+  async function loadData(){
+    try{
+      const res = await fetch(ITEMS_URL, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return forceLogout();
+      students = await res.json();
+
+      if (isAdmin) {
+        const empRes = await fetch(TEACHERS_URL, { headers: authHeaders() });
+        if (empRes.ok) employees = await empRes.json();
+        document.getElementById('segStudentCount').textContent = students.length;
+        document.getElementById('segEmployeeCount').textContent = employees.length;
+      }
+
+      departments = [...new Set([
+        ...students.map(r => r.dept),
+        ...employees.map(r => r.dept)
+      ].filter(Boolean))].sort();
+
+      // Department pickers in the add forms.
+      const fieldDept = document.getElementById('fieldDept');
+      const known = departments.length ? departments : ['CS','BBA','English','Pharm D','IT'];
+      if (isTeacher) {
+        fieldDept.innerHTML = `<option value="${escapeHtml(myDept)}">${escapeHtml(myDept)}</option>`;
+        fieldDept.disabled = true;
+      } else {
+        fieldDept.innerHTML = known.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+      }
+      document.getElementById('empDept').innerHTML =
+        known.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+
+      document.getElementById('statusText').textContent = isTeacher
+        ? 'Connected — ' + students.length + ' students in ' + myDept
+        : 'Connected — ' + students.length + ' students, ' + employees.length + ' employees';
+
+      applyTabChrome();
+      render();
+    }catch(err){
+      document.querySelector('.dot').classList.add('err');
+      document.getElementById('statusText').textContent = 'Could not reach the server';
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const dept = isTeacher ? '' : document.getElementById('deptFilter').value;
+    const sort = document.getElementById('sortSelect').value;
+    const onStudents = tab === 'students';
+
+    const searchable = onStudents
+      ? (r) => [r.name, r.email, r.roll_no, r.dept, r.class, r.batch, String(r.id)]
+      : (r) => [r.name, r.employee_no, r.dept, r.designation, r.email, r.contact_no, r.qualification];
+
+    let rows = (onStudents ? students : employees).filter(r => {
+      if (dept && r.dept !== dept) return false;
+      if (!q) return true;
+      return searchable(r).some(v => (v || '').toString().toLowerCase().includes(q));
+    });
+
+    rows.sort((a,b) => {
+      if (sort === 'id') return a.id - b.id;
+      return String(a[sort] || '').localeCompare(String(b[sort] || ''));
+    });
+
+    document.getElementById('countNum').textContent = rows.length;
+
+    const host = document.getElementById('tableHost');
+    if (!rows.length){
+      host.innerHTML = `
+        <div class="empty">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <p>No ${onStudents ? 'students' : 'employees'} match your search.</p>
+        </div>`;
+      return;
+    }
+
+    host.innerHTML = onStudents ? studentTable(rows) : employeeTable(rows);
+  }
+
+  function studentTable(rows){
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px;">Id</th>
+            <th>Name</th>
+            <th class="hide-sm">Email</th>
+            <th class="hide-sm">Roll no</th>
+            <th>Dept</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr onclick="goToProfile(${r.id})">
+              <td class="cell-id">${r.id}</td>
+              <td><div class="cell-name"><span class="av">${escapeHtml((r.name||'?').charAt(0).toUpperCase())}</span>${escapeHtml(r.name)}</div></td>
+              <td class="cell-email hide-sm">${escapeHtml(r.email)}</td>
+              <td class="cell-id hide-sm">${escapeHtml(r.roll_no || '—')}</td>
+              <td><span class="pill">${escapeHtml(r.dept || '—')}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function employeeTable(rows){
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th style="width:130px;">Employee no</th>
+            <th>Name</th>
+            <th class="hide-sm">Designation</th>
+            <th class="hide-sm">Email</th>
+            <th>Dept</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr onclick="goToEmployee(${r.id})">
+              <td class="cell-id">${escapeHtml(r.employee_no)}</td>
+              <td><div class="cell-name"><span class="av emp">${escapeHtml((r.name||'?').charAt(0).toUpperCase())}</span>${escapeHtml(r.name)}</div></td>
+              <td class="cell-email hide-sm">${escapeHtml(r.designation || '—')}</td>
+              <td class="cell-email hide-sm">${escapeHtml(r.email || '—')}</td>
+              <td><span class="pill">${escapeHtml(r.dept || '—')}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  window.goToProfile = (id) => { window.location.href = 'profile.html?id=' + id; };
+  window.goToEmployee = (id) => { window.location.href = 'employee.html?id=' + id; };
+
+  document.getElementById('searchInput').addEventListener('input', render);
+  document.getElementById('deptFilter').addEventListener('change', render);
+  document.getElementById('sortSelect').addEventListener('change', render);
+
+  // ---------- add button routes to the right form ----------
+  document.getElementById('addBtn').addEventListener('click', () => {
+    if (tab === 'students') openAddStudent(); else openAddEmployee();
+  });
+
+  // ---------- students: add ----------
+  const modalOverlay = document.getElementById('modalOverlay');
+  function openAddStudent(){
+    document.getElementById('personForm').reset();
+    if (isTeacher) document.getElementById('fieldDept').value = myDept;
+    document.getElementById('errorId').classList.remove('show');
+    document.getElementById('modalSub').textContent = isTeacher
+      ? 'The new student is added to ' + myDept + '.'
+      : 'New records appear in the directory straight away.';
+    modalOverlay.classList.add('open');
+    document.getElementById('fieldId').focus();
+  }
+  document.getElementById('cancelBtn').addEventListener('click', () => modalOverlay.classList.remove('open'));
+
+  document.getElementById('personForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    const errorId = document.getElementById('errorId');
+    errorId.classList.remove('show');
+    saveBtn.disabled = true;
+
+    const payload = {
+      id: Number(document.getElementById('fieldId').value),
+      name: document.getElementById('fieldName').value.trim(),
+      email: document.getElementById('fieldEmail').value.trim(),
+      dept: isTeacher ? myDept : document.getElementById('fieldDept').value
+    };
+
+    try{
+      const res = await fetch(ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not save');
+      modalOverlay.classList.remove('open');
+      toast('Added ' + payload.name, 'good');
+      loadData();
+    }catch(err){
+      errorId.textContent = err.message;
+      errorId.classList.add('show');
+    }finally{
+      saveBtn.disabled = false;
+    }
+  });
+
+  // ---------- employees: add / edit / delete ----------
+  const empOverlay = document.getElementById('empOverlay');
+  const empFields = {
+    employee_no: 'empNo', dept: 'empDept', name: 'empName', designation: 'empDesignation',
+    email: 'empEmail', contact_no: 'empContact', qualification: 'empQualification', joined_on: 'empJoined'
+  };
+
+  // Adding happens here; viewing, editing and deleting happen on employee.html.
+  function openAddEmployee(){
+    document.getElementById('empForm').reset();
+    document.getElementById('empError').classList.remove('show');
+    Object.values(empFields).forEach(elId => { document.getElementById(elId).value = ''; });
+    empOverlay.classList.add('open');
+    document.getElementById('empNo').focus();
+  }
+
+  document.getElementById('empCancelBtn').addEventListener('click', () => empOverlay.classList.remove('open'));
+
+  document.getElementById('empForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('empSaveBtn');
+    const errEl = document.getElementById('empError');
+    errEl.classList.remove('show');
+    btn.disabled = true;
+
+    const payload = {};
+    Object.entries(empFields).forEach(([key, elId]) => {
+      payload[key] = document.getElementById(elId).value.trim();
+    });
+
+    try{
+      const res = await fetch(TEACHERS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not save');
+      empOverlay.classList.remove('open');
+      toast('Added ' + payload.name, 'good');
+      loadData();
+    }catch(err){
+      errEl.textContent = err.message;
+      errEl.classList.add('show');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // ---------- CSV import ----------
+  // Imports into whichever section you are looking at.
+  const csvInput = document.getElementById('csvInput');
+  document.getElementById('importBtn').addEventListener('click', () => csvInput.click());
+  csvInput.addEventListener('change', async () => {
+    const file = csvInput.files[0];
+    if (!file) return;
+    const importBtn = document.getElementById('importBtn');
+    const onStudents = tab === 'students';
+    const what = onStudents ? 'students' : 'employees';
+    importBtn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('file', file);
+    try{
+      const res = await fetch((onStudents ? ITEMS_URL : TEACHERS_URL) + '/import',
+        { method:'POST', headers: authHeaders(), body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+
+      if (!data.inserted && data.failed) {
+        const why = data.errors && data.errors[0] ? ' — ' + data.errors[0].error : '';
+        toast(`Nothing imported, ${data.failed} skipped${why}`, 'bad');
+      } else {
+        toast(`Imported ${data.inserted} ${what}` + (data.failed ? `, ${data.failed} skipped` : ''), 'good');
+      }
+      loadData();
+    }catch(err){
+      toast(err.message, 'bad');
+    }finally{
+      importBtn.disabled = false;
+      csvInput.value = '';
+    }
+  });
+
+  // ---------- delete all students (admin only) ----------
+  const deleteAllOverlay = document.getElementById('deleteAllOverlay');
+  document.getElementById('deleteAllBtn').addEventListener('click', () => {
+    userDropdown.classList.remove('open');
+    document.getElementById('deleteAllForm').reset();
+    document.getElementById('deleteAllError').classList.remove('show');
+    deleteAllOverlay.classList.add('open');
+  });
+  document.getElementById('deleteAllCancelBtn').addEventListener('click', () => deleteAllOverlay.classList.remove('open'));
+
+  document.getElementById('deleteAllForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('deleteAllConfirmBtn');
+    const errEl = document.getElementById('deleteAllError');
+    errEl.classList.remove('show');
+    btn.disabled = true;
+    try{
+      const res = await fetch(ITEMS_URL + '/all/confirm', {
+        method:'DELETE',
+        headers:{ 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify({ password: document.getElementById('confirmPassword').value })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not delete');
+      deleteAllOverlay.classList.remove('open');
+      toast('All students deleted', 'good');
+      loadData();
+    }catch(err){
+      errEl.textContent = err.message;
+      errEl.classList.add('show');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  loadData();
+</script>
+</body>
+</html>

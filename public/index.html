@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>firstdb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root{
+    --ink:#12181f; --amber:#e8a33d; --text:#e9edf1; --text-dim:#8b98a5; --line:#2c3844;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink); color:var(--text); font-family:'Inter',sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+  }
+  .splash{ text-align:center; }
+  .logo{
+    font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700;
+    margin:0 0 28px; letter-spacing:-0.01em;
+  }
+  .logo span{color:var(--amber);}
+  .spinner{
+    width:34px; height:34px; margin:0 auto 18px;
+    border:3px solid var(--line); border-top-color:var(--amber);
+    border-radius:50%; animation:spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .status{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text-dim);
+    letter-spacing:0.04em;
+  }
+</style>
+</head>
+<body>
+  <div class="splash">
+    <p class="logo">first<span>db</span></p>
+    <div class="spinner"></div>
+    <p class="status" id="statusText">Starting up…</p>
+  </div>
+
+<script>
+  const statusText = document.getElementById('statusText');
+
+  // Always clear any saved session on app start, and always send to login.
+  // This means every visit requires entering credentials again.
+  ['token','role','displayName','dept','itemId','username']
+    .forEach(k => localStorage.removeItem(k));
+
+  setTimeout(() => {
+    statusText.textContent = 'Redirecting to login…';
+    setTimeout(() => { window.location.href = 'login.html'; }, 500);
+  }, 900);
+</script>
+</body>
+</html>

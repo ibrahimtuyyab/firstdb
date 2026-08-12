@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — firstdb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#12181f;
+    --panel:#1a222c;
+    --panel-light:#212b37;
+    --line:#2c3844;
+    --amber:#e8a33d;
+    --amber-dim:#8a6a34;
+    --text:#e9edf1;
+    --text-dim:#8b98a5;
+    --bad:#c9584f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* Ambient floating background glow */
+  .glow{
+    position:fixed;
+    border-radius:50%;
+    filter:blur(90px);
+    opacity:0.18;
+    pointer-events:none;
+    z-index:0;
+  }
+  .glow-1{
+    width:420px; height:420px; background:var(--amber);
+    top:-120px; left:-100px;
+    animation:float1 14s ease-in-out infinite;
+  }
+  .glow-2{
+    width:340px; height:340px; background:#3d6fb5;
+    bottom:-100px; right:-80px;
+    animation:float2 16s ease-in-out infinite;
+  }
+  @keyframes float1{
+    0%,100%{ transform:translate(0,0); }
+    50%{ transform:translate(60px, 40px); }
+  }
+  @keyframes float2{
+    0%,100%{ transform:translate(0,0); }
+    50%{ transform:translate(-50px, -30px); }
+  }
+
+  @keyframes cardIn{
+    from{ opacity:0; transform:translateY(24px) scale(0.97); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @keyframes logoIn{
+    from{ opacity:0; transform:translateY(-8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn{
+    from{ opacity:0; transform:translateY(6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes shake{
+    10%,90%{ transform:translateX(-1px); }
+    20%,80%{ transform:translateX(2px); }
+    30%,50%,70%{ transform:translateX(-4px); }
+    40%,60%{ transform:translateX(4px); }
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .card{
+    position:relative;
+    z-index:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:52px 56px 56px;
+    width:100%;
+    max-width:520px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.4);
+    animation:cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card.shake{ animation:shake 0.5s ease; }
+
+  .lock-icon{
+    width:56px; height:56px;
+    background:linear-gradient(135deg, var(--amber), #c9822a);
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 22px;
+    color:#1a1305;
+    animation:logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+    box-shadow:0 10px 24px rgba(232,163,61,0.25);
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 10px;
+    text-align:center;
+    animation:logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:32px;
+    font-weight:700;
+    margin:0 0 8px;
+    text-align:center;
+    animation:logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+  }
+  .lede{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:14.5px;
+    margin:0 0 28px;
+    animation:logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
+  }
+
+  /* Role tabs */
+  .tabs{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:6px;
+    background:var(--ink);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:6px;
+    margin-bottom:30px;
+    animation:logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.28s backwards;
+  }
+  .tab{
+    background:none;
+    border:none;
+    border-radius:8px;
+    padding:11px 6px 10px;
+    color:var(--text-dim);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    transition:background .18s ease, color .18s ease;
+  }
+  .tab svg{ opacity:.85; }
+  .tab:hover{ color:var(--text); }
+  .tab.active{
+    background:var(--amber);
+    color:#1a1305;
+  }
+
+  .pane{ display:none; }
+  .pane.active{ display:block; animation:fadeIn .3s ease; }
+
+  .field{ margin-bottom:20px; }
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .input-wrap{ position:relative; }
+  .input-wrap > svg{
+    position:absolute; left:16px; top:50%; transform:translateY(-50%);
+    color:var(--text-dim); pointer-events:none; transition:color .2s ease;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--ink);
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:15px 16px 15px 46px;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:15.5px;
+    outline:none;
+    transition:border-color .2s ease, box-shadow .2s ease;
+    appearance:none;
+  }
+  .field select{ cursor:pointer; }
+  .field select option{ background:var(--panel); color:var(--text); }
+  .field input:focus, .field select:focus{
+    border-color:var(--amber-dim);
+    box-shadow:0 0 0 4px rgba(232,163,61,0.1);
+  }
+  .input-wrap:focus-within > svg{ color:var(--amber); }
+  .chev{
+    position:absolute; right:16px; top:50%; transform:translateY(-50%);
+    color:var(--text-dim); pointer-events:none;
+  }
+
+  .hint{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin:-12px 0 20px;
+    line-height:1.5;
+  }
+
+  .btn-primary{
+    width:100%;
+    background:var(--amber);
+    color:#1a1305;
+    border:none;
+    border-radius:10px;
+    padding:16px;
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:6px;
+    position:relative;
+    overflow:hidden;
+    transition:filter .15s ease, transform .1s ease;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-primary:active{ transform:scale(0.98); }
+  .btn-primary:disabled{ opacity:.7; cursor:not-allowed; }
+
+  .spinner{
+    width:16px; height:16px;
+    border:2px solid rgba(26,19,5,0.3);
+    border-top-color:#1a1305;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    display:none;
+  }
+  .btn-primary.loading .spinner{ display:inline-block; }
+  .btn-primary.loading .btn-text{ opacity:0.7; }
+
+  .error-msg{
+    color:var(--bad);
+    font-size:13.5px;
+    font-family:'IBM Plex Mono',monospace;
+    margin-top:18px;
+    text-align:center;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .error-msg.show{ display:flex; }
+
+  @media (max-width:560px){
+    .card{ padding:40px 24px 44px; }
+    h1{ font-size:26px; }
+    .tab{ font-size:12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="card" id="card">
+    <div class="lock-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    </div>
+    <p class="eyebrow">firstdb</p>
+    <h1>Welcome back</h1>
+    <p class="lede" id="lede">Choose how you want to log in</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-role="student" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
+        Student
+      </button>
+      <button class="tab" data-role="teacher" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Teacher
+      </button>
+      <button class="tab" data-role="admin" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V7l8-4z"/></svg>
+        Admin
+      </button>
+    </div>
+
+    <form id="loginForm">
+      <!-- STUDENT -->
+      <div class="pane active" data-pane="student">
+        <div class="field">
+          <label>Id no</label>
+          <div class="input-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 10h3M15 14h3M6 16c.6-1.3 1.8-2 3-2s2.4.7 3 2"/></svg>
+            <input type="text" id="studentId" placeholder="e.g. 601 or CS-0082" autocomplete="username">
+          </div>
+        </div>
+        <p class="hint">Use the id no or roll no printed on your record.</p>
+      </div>
+
+      <!-- TEACHER -->
+      <div class="pane" data-pane="teacher">
+        <div class="field">
+          <label>Employee no</label>
+          <div class="input-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
+            <input type="text" id="employeeNo" placeholder="e.g. EMP-1001" autocomplete="username">
+          </div>
+        </div>
+        <div class="field">
+          <label>Department</label>
+          <div class="input-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M10 21v-6h4v6"/></svg>
+            <select id="dept">
+              <option value="">Loading departments…</option>
+            </select>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <p class="hint">You will only see the students of the department you pick.</p>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="pane" data-pane="admin">
+        <div class="field">
+          <label>Username</label>
+          <div class="input-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0116 0v1"/></svg>
+            <input type="text" id="username" autocomplete="username">
+          </div>
+        </div>
+      </div>
+
+      <!-- shared password field -->
+      <div class="field">
+        <label>Password</label>
+        <div class="input-wrap">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <input type="password" id="password" autocomplete="current-password" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <span class="spinner"></span>
+        <span class="btn-text">Log in as student</span>
+      </button>
+
+      <p class="error-msg" id="errorMsg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorText">Invalid login</span>
+      </p>
+    </form>
+  </div>
+
+<script>
+  const API = window.location.origin + '/api';
+  const form = document.getElementById('loginForm');
+  const errorMsg = document.getElementById('errorMsg');
+  const errorText = document.getElementById('errorText');
+  const submitBtn = document.getElementById('submitBtn');
+  const card = document.getElementById('card');
+  const deptSelect = document.getElementById('dept');
+
+  let role = 'student';
+
+  const LEDE = {
+    student: 'Log in to see your own record',
+    teacher: 'Log in to manage your department',
+    admin: 'Log in to manage the whole directory'
+  };
+
+  // --- role tabs ---
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      role = tab.dataset.role;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.dataset.pane === role));
+      submitBtn.querySelector('.btn-text').textContent = 'Log in as ' + role;
+      document.getElementById('lede').textContent = LEDE[role];
+      errorMsg.classList.remove('show');
+      const first = document.querySelector('.pane.active input, .pane.active select');
+      if (first) first.focus();
+    });
+  });
+
+  // --- department list for the teacher tab ---
+  (async () => {
+    try{
+      const res = await fetch(API + '/departments');
+      const depts = await res.json();
+      deptSelect.innerHTML = '<option value="">Select department…</option>' +
+        depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    }catch{
+      deptSelect.innerHTML = '<option value="">Could not load departments</option>';
+    }
+  })();
+
+  function showError(message){
+    errorText.textContent = message;
+    errorMsg.classList.add('show');
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('loading');
+    card.classList.remove('shake');
+    void card.offsetWidth; // restart animation
+    card.classList.add('shake');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMsg.classList.remove('show');
+
+    const password = document.getElementById('password').value;
+    const body = { role, password };
+
+    if (role === 'student') {
+      body.studentId = document.getElementById('studentId').value.trim();
+      if (!body.studentId) return showError('Enter your id no');
+    } else if (role === 'teacher') {
+      body.employeeNo = document.getElementById('employeeNo').value.trim();
+      body.dept = deptSelect.value;
+      if (!body.employeeNo) return showError('Enter your employee no');
+      if (!body.dept) return showError('Select your department');
+    } else {
+      body.username = document.getElementById('username').value.trim();
+      if (!body.username) return showError('Enter your username');
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+
+    try{
+      const res = await fetch(API + '/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || 'Login failed');
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('displayName', data.displayName || '');
+      localStorage.setItem('dept', data.dept || '');
+      localStorage.setItem('itemId', data.itemId || '');
+
+      submitBtn.querySelector('.btn-text').textContent = 'Success — redirecting…';
+      setTimeout(() => {
+        window.location.href = data.role === 'student' ? 'student.html' : 'directory.html';
+      }, 400);
+    }catch(err){
+      showError(err.message);
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+const express = require('express');
+const cors = require('cors');
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
+// GET all items
+app.get('/api/items', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM items ORDER BY id');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET one item
+app.get('/api/items/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM items WHERE id = $1', [req.params.id]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST new item
+app.post('/api/items', async (req, res) => {
+  const { name, id, email, dept } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO items (name, id, email, dept) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, id, email, dept]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update item
+app.put('/api/items/:id', async (req, res) => {
+  const { name, email, dept } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE items SET name = $1, email = $2, dept = $3 WHERE id = $4 RETURNING *',
+      [name, email, dept, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE item
+app.delete('/api/items/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM items WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Item deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

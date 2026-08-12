@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.envnano*
+dist/
+build/
+*.log
+.DS_Store
+uploads/

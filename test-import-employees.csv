@@ -1,0 +1,4 @@
+employee_no,name,dept,designation,email,contact_no,qualification,joined_on
+EMP-1006,Zainab Iqbal,CS,Lecturer,zainab@campus.edu,0301-2000006,MS Computer Science,2022
+EMP-1007,Usman Tariq,BBA,Assistant Professor,usman@campus.edu,0301-2000007,MBA Finance,2020
+EMP-1008,Mehwish Anwar,English,Lecturer,mehwish@campus.edu,0301-2000008,MA English Literature,2023

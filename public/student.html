@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My record — firstdb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#12181f; --panel:#1a222c; --panel-light:#212b37; --line:#2c3844;
+    --amber:#e8a33d; --amber-dim:#8a6a34; --text:#e9edf1; --text-dim:#8b98a5;
+    --good:#5fb488; --bad:#c9584f;
+  }
+  [data-theme="light"]{
+    --ink:#f5f3ee; --panel:#ffffff; --panel-light:#f0ede6; --line:#e1dcd0;
+    --amber:#b5761f; --amber-dim:#e3c088; --text:#20241f; --text-dim:#6b6558;
+    --good:#3d8f64; --bad:#b5473d;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink); color:var(--text); font-family:'Inter',sans-serif;
+    min-height:100vh; transition:background .2s ease, color .2s ease;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:48px 28px 80px;}
+
+  header{
+    display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px solid var(--line); padding-bottom:22px; margin-bottom:34px;
+    flex-wrap:wrap; gap:14px;
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--amber); margin:0;
+  }
+  .header-right{ display:flex; align-items:center; gap:12px; }
+  .role-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:5px 10px; border-radius:999px;
+    border:1px solid var(--amber-dim); color:var(--amber); background:rgba(232,163,61,0.1);
+  }
+  .theme-toggle, .logout-btn{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    height:38px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text); transition:border-color .15s ease;
+  }
+  .theme-toggle{ width:38px; }
+  .logout-btn{ padding:0 14px; gap:7px; font-family:'Inter',sans-serif; font-size:13.5px; }
+  .theme-toggle:hover, .logout-btn:hover{ border-color:var(--amber-dim); }
+
+  @keyframes cardIn{
+    from{ opacity:0; transform:translateY(18px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    overflow:hidden; animation:cardIn .5s cubic-bezier(0.16,1,0.3,1);
+  }
+  .card-top{
+    padding:38px 36px 30px; display:flex; align-items:center; gap:22px;
+    background:var(--panel-light); border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  .photo{
+    width:92px; height:92px; border-radius:20px; flex:none; object-fit:cover;
+    background:linear-gradient(135deg, var(--amber), #c9822a); color:#1a1305;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-size:36px; font-weight:700;
+    box-shadow:0 10px 26px rgba(232,163,61,0.22);
+  }
+  .who h1{
+    font-family:'Space Grotesk',sans-serif; font-size:30px; font-weight:700;
+    margin:0 0 8px; letter-spacing:-0.01em;
+  }
+  .who .meta{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-dim);
+    display:flex; gap:14px; flex-wrap:wrap;
+  }
+  .pill{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    padding:3px 10px; border-radius:999px; border:1px solid var(--amber-dim); color:var(--amber);
+  }
+
+  .grid{ display:grid; grid-template-columns:repeat(2, 1fr); }
+  .cell{ padding:22px 36px; border-bottom:1px solid var(--line); }
+  .cell:nth-child(odd){ border-right:1px solid var(--line); }
+  .cell label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px;
+  }
+  .cell .value{ font-size:16px; word-break:break-word; }
+  .cell .value.empty{ color:var(--text-dim); font-style:italic; font-size:14.5px; }
+
+  .footnote{
+    padding:20px 36px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+    color:var(--text-dim); display:flex; align-items:center; gap:9px; line-height:1.6;
+  }
+  .footnote svg{ flex:none; color:var(--amber); }
+
+  .state{
+    padding:70px 20px; text-align:center; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  }
+  .state svg{ margin-bottom:14px; opacity:.5; }
+  .state h2{ font-family:'Space Grotesk',sans-serif; color:var(--text); font-size:20px; margin:0 0 8px; }
+
+  @media (max-width:640px){
+    .wrap{ padding:32px 18px 60px; }
+    .card-top{ padding:28px 22px; }
+    .grid{ grid-template-columns:1fr; }
+    .cell{ padding:18px 22px; }
+    .cell:nth-child(odd){ border-right:none; }
+    .footnote{ padding:18px 22px; }
+    .who h1{ font-size:24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="brand-eyebrow">firstdb</p>
+    </div>
+    <div class="header-right">
+      <span class="role-badge">Student</span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+      <button class="logout-btn" id="logoutBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Log out
+      </button>
+    </div>
+  </header>
+
+  <div id="host">
+    <div class="state"><p>Loading your record…</p></div>
+  </div>
+</div>
+
+<script>
+  const API_URL = window.location.origin + '/api/items';
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  const itemId = localStorage.getItem('itemId');
+
+  // This page is for students only.
+  if (!token) {
+    window.location.replace('login.html');
+  } else if (role !== 'student') {
+    window.location.replace('directory.html');
+  }
+
+  function forceLogout(){
+    localStorage.clear();
+    window.location.replace('login.html');
+  }
+  document.getElementById('logoutBtn').addEventListener('click', forceLogout);
+
+  // theme
+  if (localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme','light');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme','dark'); }
+    else { document.documentElement.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); }
+  });
+
+  const FIELDS = [
+    ['roll_no','Roll no'],
+    ['class','Class'],
+    ['batch','Batch'],
+    ['dept','Department'],
+    ['father_name',"Father's name"],
+    ['contact_no','Contact no'],
+    ['email','Email'],
+    ['id','Id no']
+  ];
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function errorState(title, message){
+    document.getElementById('host').innerHTML = `
+      <div class="state">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(message)}</p>
+      </div>`;
+  }
+
+  (async () => {
+    try{
+      const res = await fetch(API_URL + '/' + itemId, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.status === 401 || res.status === 403) return forceLogout();
+      const person = await res.json();
+      if (!res.ok) return errorState('Not available', person.error || 'Could not load your record');
+
+      const initial = (person.name || '?').charAt(0).toUpperCase();
+      const photo = person.photo
+        ? `<img class="photo" src="${escapeHtml(person.photo)}" alt="">`
+        : `<div class="photo">${escapeHtml(initial)}</div>`;
+
+      document.getElementById('host').innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            ${photo}
+            <div class="who">
+              <h1>${escapeHtml(person.name || 'Unnamed')}</h1>
+              <div class="meta">
+                <span class="pill">${escapeHtml(person.dept || '—')}</span>
+                <span>${escapeHtml(person.roll_no || 'No roll no')}</span>
+              </div>
+            </div>
+          </div>
+          <div class="grid">
+            ${FIELDS.map(([key,label]) => {
+              const v = person[key];
+              const filled = v !== null && v !== undefined && String(v).trim() !== '';
+              return `
+                <div class="cell">
+                  <label>${label}</label>
+                  <div class="value ${filled ? '' : 'empty'}">${filled ? escapeHtml(v) : 'Not on record'}</div>
+                </div>`;
+            }).join('')}
+          </div>
+          <div class="footnote">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            This is your own record and it is read only. Ask your department teacher or the admin to correct anything that looks wrong.
+          </div>
+        </div>`;
+    }catch(err){
+      errorState('Could not reach the server', err.message);
+    }
+  })();
+</script>
+</body>
+</html>

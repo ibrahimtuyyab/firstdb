@@ -1,0 +1,3 @@
+id,name,email,dept,father_name,contact_no,roll_no,class,batch
+501,Test Student One,test1@gmail.com,IT,Muhammad Ali,0301-1000501,BSCS-0501,BSCS,2024
+502,Test Student Two,test2@gmail.com,HR,Muhammad Khan,0301-1000502,BSCS-0502,BBA,2024

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee — firstdb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#12181f; --panel:#1a222c; --panel-light:#212b37; --line:#2c3844;
+    --amber:#e8a33d; --amber-dim:#8a6a34; --text:#e9edf1; --text-dim:#8b98a5;
+    --good:#5fb488; --bad:#c9584f; --overlay:rgba(10,14,18,0.7);
+  }
+  [data-theme="light"]{
+    --ink:#f5f3ee; --panel:#ffffff; --panel-light:#f0ede6; --line:#e1dcd0;
+    --amber:#b5761f; --amber-dim:#e3c088; --text:#20241f; --text-dim:#6b6558;
+    --good:#3d8f64; --bad:#b5473d; --overlay:rgba(245,243,238,0.7);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink); color:var(--text); font-family:'Inter',sans-serif;
+    min-height:100vh; transition:background .2s ease, color .2s ease;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:40px 28px 80px;}
+
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:28px; flex-wrap:wrap; gap:14px;
+  }
+  .back-link{
+    display:inline-flex; align-items:center; gap:8px; color:var(--text-dim);
+    text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px;
+    transition:color .15s ease;
+  }
+  .back-link:hover{ color:var(--amber); }
+  .topbar-right{ display:flex; align-items:center; gap:12px; }
+  .role-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:5px 10px; border-radius:999px;
+    border:1px solid var(--amber-dim); color:var(--amber); background:rgba(232,163,61,0.1);
+  }
+  .theme-toggle{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text); transition:border-color .15s ease;
+  }
+  .theme-toggle:hover{border-color:var(--amber-dim);}
+
+  @keyframes cardIn{
+    from{ opacity:0; transform:translateY(18px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    overflow:hidden; animation:cardIn .45s cubic-bezier(0.16,1,0.3,1);
+  }
+  .card-top{
+    padding:34px 34px 28px; display:flex; align-items:center; gap:22px;
+    background:var(--panel-light); border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  .photo, .photo-box{
+    width:88px; height:88px; border-radius:18px; flex:none; object-fit:cover;
+    background:linear-gradient(135deg, var(--amber), #c9822a); color:#1a1305;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-size:34px; font-weight:700;
+  }
+  .photo-box{
+    background:var(--ink); border:1.5px dashed var(--line); color:var(--text-dim);
+    cursor:pointer; font-size:11px; font-family:'IBM Plex Mono',monospace;
+    text-align:center; padding:8px; flex-direction:column; gap:5px; overflow:hidden;
+  }
+  .photo-box:hover{ border-color:var(--amber-dim); color:var(--amber); }
+  .photo-box img{ width:100%; height:100%; object-fit:cover; border-radius:16px; }
+  .who{ flex:1; min-width:200px; }
+  .who h1{
+    font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700;
+    margin:0 0 6px; letter-spacing:-0.01em;
+  }
+  .who .role-line{ color:var(--text-dim); font-size:14.5px; margin:0 0 10px; }
+  .who .meta{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-dim);
+    display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+  }
+  .pill{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    padding:3px 10px; border-radius:999px; border:1px solid var(--amber-dim); color:var(--amber);
+  }
+  .card-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  .btn{
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:600; border-radius:8px;
+    padding:0 16px; cursor:pointer; border:1px solid transparent; transition:all .15s ease;
+    display:inline-flex; align-items:center; gap:7px; white-space:nowrap; height:40px;
+  }
+  .btn-primary{ background:var(--amber); color:#1a1305; }
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.6; cursor:not-allowed;}
+  .btn-ghost{ background:var(--panel); color:var(--text); border-color:var(--line); }
+  [data-theme="light"] .btn-ghost{ background:var(--panel-light); }
+  .btn-ghost:hover{border-color:var(--amber-dim);}
+  .btn-danger{ background:transparent; color:var(--bad); border-color:transparent; }
+  .btn-danger:hover{background:rgba(201,88,79,0.12);}
+  .btn-destroy{ background:var(--bad); color:#fff; }
+  .btn-destroy:hover{filter:brightness(1.1);}
+
+  /* stat strip */
+  .stats{
+    display:grid; grid-template-columns:repeat(3, 1fr);
+    border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  .stat{ padding:20px 22px; text-align:center; border-right:1px solid var(--line); }
+  .stat:last-child{ border-right:none; }
+  .stat .num{
+    font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:var(--amber);
+    display:block; margin-bottom:4px;
+  }
+  .stat .lbl{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .stat a{ color:inherit; text-decoration:none; }
+  .stat a:hover .num{ filter:brightness(1.15); }
+
+  .grid{ display:grid; grid-template-columns:repeat(2, 1fr); }
+  .cell{ padding:20px 34px; border-bottom:1px solid var(--line); }
+  .cell:nth-child(odd){ border-right:1px solid var(--line); }
+  .cell label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px;
+  }
+  .cell .value{ font-size:15.5px; word-break:break-word; }
+  .cell .value.empty{ color:var(--text-dim); font-style:italic; font-size:14px; }
+  .cell input, .cell select{
+    width:100%; background:var(--ink); border:1.5px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-family:'Inter',sans-serif; font-size:14.5px; outline:none;
+  }
+  .cell input:focus, .cell select:focus{ border-color:var(--amber-dim); }
+
+  .login-block{
+    padding:22px 34px; border-bottom:1px solid var(--line);
+  }
+  .login-block h3{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-dim); margin:0 0 14px; font-weight:400;
+  }
+  .cred{
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .cred div{
+    flex:1; min-width:140px; background:var(--ink); border:1px solid var(--line);
+    border-radius:9px; padding:12px 14px;
+  }
+  .cred span{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:0.07em; color:var(--text-dim); margin-bottom:5px;
+  }
+  .cred strong{ font-family:'IBM Plex Mono',monospace; font-size:14px; color:var(--amber); font-weight:500; }
+
+  .footnote{
+    padding:18px 34px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+    color:var(--text-dim); display:flex; align-items:center; gap:9px; line-height:1.6;
+  }
+  .footnote svg{ flex:none; color:var(--amber); }
+
+  .state{
+    padding:70px 20px; text-align:center; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  }
+  .state svg{ margin-bottom:14px; opacity:.5; }
+  .state h2{ font-family:'Space Grotesk',sans-serif; color:var(--text); font-size:20px; margin:0 0 8px; }
+
+  .overlay{
+    position:fixed; inset:0; background:var(--overlay); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; padding:20px; z-index:100;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:32px; width:100%; max-width:430px; box-shadow:0 30px 70px rgba(0,0,0,0.45);
+  }
+  .modal h2{ font-family:'Space Grotesk',sans-serif; font-size:21px; margin:0 0 6px; }
+  .modal p.sub{ color:var(--text-dim); font-size:13.5px; margin:0 0 20px; line-height:1.55; }
+  .danger-note{
+    background:rgba(201,88,79,0.1); border:1px solid rgba(201,88,79,0.3); border-radius:8px;
+    padding:12px 14px; font-size:13px; color:var(--bad); margin-bottom:20px; line-height:1.5;
+  }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:13px 20px; font-size:14px; box-shadow:0 14px 34px rgba(0,0,0,0.35);
+    display:flex; align-items:center; gap:9px; opacity:0;
+    transition:all .3s cubic-bezier(0.16,1,0.3,1); z-index:200;
+  }
+  .toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
+  .toast.good{ border-color:var(--good); color:var(--good); }
+  .toast.bad{ border-color:var(--bad); color:var(--bad); }
+
+  @media (max-width:640px){
+    .wrap{ padding:28px 18px 60px; }
+    .card-top{ padding:26px 20px; }
+    .grid{ grid-template-columns:1fr; }
+    .cell{ padding:16px 20px; }
+    .cell:nth-child(odd){ border-right:none; }
+    .login-block, .footnote{ padding:16px 20px; }
+    .who h1{ font-size:23px; }
+    .stat{ padding:16px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="back-link" href="directory.html#employees">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to employees
+    </a>
+    <div class="topbar-right">
+      <span class="role-badge">Admin</span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="host">
+    <div class="state"><p>Loading employee…</p></div>
+  </div>
+</div>
+
+<!-- delete confirm -->
+<div class="overlay" id="deleteOverlay">
+  <div class="modal">
+    <h2>Delete this employee?</h2>
+    <p class="sub" id="deleteSub">This also removes their teacher login.</p>
+    <div class="danger-note">Their department's students stay in the directory. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="deleteCancelBtn">Cancel</button>
+      <button class="btn btn-destroy" id="deleteConfirmBtn">Delete employee</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<script>
+  const API = window.location.origin + '/api';
+  const TEACHERS_URL = API + '/teachers';
+  const employeeId = new URLSearchParams(window.location.search).get('id');
+
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+
+  // Employee records are admin-only.
+  if (!token) {
+    window.location.replace('login.html');
+  } else if (role === 'student') {
+    window.location.replace('student.html');
+  } else if (role !== 'admin') {
+    window.location.replace('directory.html');
+  }
+
+  const authHeaders = () => ({ 'Authorization': 'Bearer ' + token });
+
+  function forceLogout(){
+    localStorage.clear();
+    window.location.replace('login.html');
+  }
+
+  function toast(message, kind){
+    const el = document.getElementById('toast');
+    document.getElementById('toastText').textContent = message;
+    el.className = 'toast show ' + (kind || '');
+    setTimeout(() => { el.className = 'toast ' + (kind || ''); }, 2600);
+  }
+
+  // theme
+  if (localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme','light');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('theme','dark'); }
+    else { document.documentElement.setAttribute('data-theme','light'); localStorage.setItem('theme','light'); }
+  });
+
+  const FIELDS = [
+    ['employee_no','Employee no'],
+    ['dept','Department'],
+    ['designation','Designation'],
+    ['qualification','Qualification'],
+    ['email','Email'],
+    ['contact_no','Contact no'],
+    ['joined_on','Joined on']
+  ];
+
+  let employee = null;
+  let departments = [];
+  let deptStudents = [];
+  let photoData = null;
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function errorState(title, message){
+    document.getElementById('host').innerHTML = `
+      <div class="state">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(message)}</p>
+      </div>`;
+  }
+
+  async function load(){
+    try{
+      const res = await fetch(TEACHERS_URL + '/' + employeeId, { headers: authHeaders() });
+      if (res.status === 401) return forceLogout();
+      const data = await res.json();
+      if (res.status === 403) return errorState('Not allowed', data.error || 'Only an admin can open employee records.');
+      if (!res.ok) return errorState('Employee not found', data.error || 'That employee does not exist.');
+      employee = data;
+
+      // Context for the profile: colleagues and the students they teach.
+      const [allEmp, allStudents] = await Promise.all([
+        fetch(TEACHERS_URL, { headers: authHeaders() }).then(r => r.ok ? r.json() : []),
+        fetch(API + '/items', { headers: authHeaders() }).then(r => r.ok ? r.json() : [])
+      ]);
+      departments = [...new Set([
+        ...allEmp.map(e => e.dept),
+        ...allStudents.map(s => s.dept)
+      ].filter(Boolean))].sort();
+      deptStudents = allStudents.filter(s => s.dept === employee.dept);
+
+      renderView();
+    }catch(err){
+      errorState('Could not reach the server', err.message);
+    }
+  }
+
+  function headerBlock(editing){
+    const initial = (employee.name || '?').charAt(0).toUpperCase();
+    const photo = editing
+      ? `<div class="photo-box" id="photoBox">
+           ${photoData || employee.photo
+             ? `<img src="${escapeHtml(photoData || employee.photo)}" alt="">`
+             : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span>Photo</span>`}
+         </div>
+         <input type="file" id="photoInput" accept="image/*" style="display:none;">`
+      : (employee.photo
+          ? `<img class="photo" src="${escapeHtml(employee.photo)}" alt="">`
+          : `<div class="photo">${escapeHtml(initial)}</div>`);
+
+    return `
+      <div class="card-top">
+        ${photo}
+        <div class="who">
+          <h1>${escapeHtml(employee.name || 'Unnamed')}</h1>
+          <p class="role-line">${escapeHtml(employee.designation || 'Employee')}</p>
+          <div class="meta">
+            <span class="pill">${escapeHtml(employee.dept || '—')}</span>
+            <span>${escapeHtml(employee.employee_no)}</span>
+          </div>
+        </div>
+        <div class="card-actions" id="cardActions"></div>
+      </div>`;
+  }
+
+  function statsBlock(){
+    return `
+      <div class="stats">
+        <div class="stat">
+          <a href="directory.html?dept=${encodeURIComponent(employee.dept || '')}">
+            <span class="num">${deptStudents.length}</span>
+            <span class="lbl">Students in ${escapeHtml(employee.dept || '—')}</span>
+          </a>
+        </div>
+        <div class="stat">
+          <span class="num">${escapeHtml(employee.joined_on || '—')}</span>
+          <span class="lbl">Joined on</span>
+        </div>
+        <div class="stat">
+          <span class="num">Teacher</span>
+          <span class="lbl">Access level</span>
+        </div>
+      </div>`;
+  }
+
+  function renderView(){
+    document.getElementById('host').innerHTML = `
+      <div class="card">
+        ${headerBlock(false)}
+        ${statsBlock()}
+        <div class="grid">
+          ${FIELDS.map(([key,label]) => {
+            const v = employee[key];
+            const filled = v !== null && v !== undefined && String(v).trim() !== '';
+            return `
+              <div class="cell">
+                <label>${label}</label>
+                <div class="value ${filled ? '' : 'empty'}">${filled ? escapeHtml(v) : 'Not on record'}</div>
+              </div>`;
+          }).join('')}
+        </div>
+        <div class="login-block">
+          <h3>How this person logs in</h3>
+          <div class="cred">
+            <div><span>Role</span><strong>Teacher</strong></div>
+            <div><span>Employee no</span><strong>${escapeHtml(employee.employee_no)}</strong></div>
+            <div><span>Department</span><strong>${escapeHtml(employee.dept)}</strong></div>
+          </div>
+        </div>
+        <div class="footnote">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          They can view and edit ${escapeHtml(employee.dept)} students only, and cannot delete any record.
+        </div>
+      </div>`;
+
+    document.getElementById('cardActions').innerHTML = `
+      <button class="btn btn-ghost" id="editBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Edit
+      </button>
+      <button class="btn btn-danger" id="deleteBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        Delete
+      </button>`;
+    document.getElementById('editBtn').addEventListener('click', renderEdit);
+    document.getElementById('deleteBtn').addEventListener('click', openDelete);
+  }
+
+  function renderEdit(){
+    const deptOptions = (departments.length ? departments : [employee.dept])
+      .map(d => `<option value="${escapeHtml(d)}" ${d === employee.dept ? 'selected' : ''}>${escapeHtml(d)}</option>`)
+      .join('');
+
+    document.getElementById('host').innerHTML = `
+      <div class="card">
+        ${headerBlock(true)}
+        <div class="grid">
+          ${FIELDS.map(([key,label]) => `
+            <div class="cell">
+              <label>${label}</label>
+              ${key === 'dept'
+                ? `<select id="field_dept">${deptOptions}</select>`
+                : `<input id="field_${key}" value="${escapeHtml(employee[key] ?? '')}">`}
+            </div>`).join('')}
+        </div>
+        <div class="footnote">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Changing the employee no or department changes how this person logs in. Click the photo box to attach a picture (under 1.5 MB).
+        </div>
+      </div>`;
+
+    document.getElementById('cardActions').innerHTML = `
+      <button class="btn btn-ghost" id="cancelEditBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveEditBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        Save changes
+      </button>`;
+    document.getElementById('cancelEditBtn').addEventListener('click', () => { photoData = null; renderView(); });
+    document.getElementById('saveEditBtn').addEventListener('click', handleSave);
+
+    const photoInput = document.getElementById('photoInput');
+    document.getElementById('photoBox').addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', handlePhotoSelect);
+  }
+
+  function handlePhotoSelect(e){
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 1.5 * 1024 * 1024) return toast('Photo must be under 1.5 MB', 'bad');
+    const reader = new FileReader();
+    reader.onload = () => {
+      photoData = reader.result;
+      document.getElementById('photoBox').innerHTML = `<img src="${photoData}" alt="">`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSave(){
+    const btn = document.getElementById('saveEditBtn');
+    btn.disabled = true;
+
+    const payload = { photo: photoData || employee.photo || null };
+    FIELDS.forEach(([key]) => {
+      payload[key] = document.getElementById('field_' + key).value.trim();
+    });
+
+    try{
+      const res = await fetch(TEACHERS_URL + '/' + employeeId, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 401) return forceLogout();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not save');
+      employee = data;
+      photoData = null;
+      renderView();
+      toast('Changes saved', 'good');
+    }catch(err){
+      toast(err.message, 'bad');
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- delete ----------
+  const deleteOverlay = document.getElementById('deleteOverlay');
+  function openDelete(){
+    document.getElementById('deleteSub').textContent =
+      'This removes ' + (employee.name || 'this employee') + ' and their teacher login.';
+    deleteOverlay.classList.add('open');
+  }
+  document.getElementById('deleteCancelBtn').addEventListener('click', () => deleteOverlay.classList.remove('open'));
+
+  document.getElementById('deleteConfirmBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    try{
+      const res = await fetch(TEACHERS_URL + '/' + employeeId, { method:'DELETE', headers: authHeaders() });
+      if (res.status === 401) return forceLogout();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not delete');
+      window.location.href = 'directory.html#employees';
+    }catch(err){
+      deleteOverlay.classList.remove('open');
+      toast(err.message, 'bad');
+      btn.disabled = false;
+    }
+  });
+
+  load();
+</script>
+</body>
+</html>
