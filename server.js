@@ -270,6 +270,44 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
   }
 });
 
+// Put someone's password back to their role's default. Admin only.
+//
+// Passwords are hashed, so an admin cannot look one up and read it back to a
+// teacher or student who has forgotten theirs. Resetting to the known default
+// is the only help they can offer - the person then changes it to something
+// private again from their own page.
+function resetToDefault(table, defaultPassword, notFoundMessage) {
+  return async (req, res) => {
+    try {
+      const password = defaultPassword();
+      const result = await pool.query(
+        `UPDATE ${table} SET password = $1 WHERE id = $2 RETURNING id`,
+        [await bcrypt.hash(password, BCRYPT_ROUNDS), req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: notFoundMessage });
+      // The default is not a secret - it is the same for everyone - so hand it
+      // back for the admin to pass on.
+      res.json({ message: 'Password reset', password });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
+}
+
+app.post(
+  '/api/teachers/:id/reset-password',
+  requireAuth,
+  requireRole(ROLES.ADMIN),
+  resetToDefault('teachers', () => DEFAULT_TEACHER_PASSWORD, 'Employee not found')
+);
+
+app.post(
+  '/api/items/:id/reset-password',
+  requireAuth,
+  requireRole(ROLES.ADMIN),
+  resetToDefault('items', () => DEFAULT_STUDENT_PASSWORD, 'Record not found')
+);
+
 // Department list, used by the teacher login form.
 app.get('/api/departments', async (req, res) => {
   try {

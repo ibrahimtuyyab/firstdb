@@ -232,6 +232,18 @@
   </div>
 </div>
 
+<!-- reset password confirm -->
+<div class="overlay" id="resetOverlay">
+  <div class="modal">
+    <h2>Reset this teacher's password?</h2>
+    <p class="sub">Their password goes back to the default for teachers. Anything they had chosen themselves stops working, and they can set a new one after logging in.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="resetCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="resetConfirmBtn">Reset password</button>
+    </div>
+  </div>
+</div>
+
 <!-- delete confirm -->
 <div class="overlay" id="deleteOverlay">
   <div class="modal">
@@ -423,13 +435,47 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
         Edit
       </button>
+      <button class="btn btn-ghost" id="resetPwBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Reset password
+      </button>
       <button class="btn btn-danger" id="deleteBtn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
         Delete
       </button>`;
     document.getElementById('editBtn').addEventListener('click', renderEdit);
     document.getElementById('deleteBtn').addEventListener('click', openDelete);
+    document.getElementById('resetPwBtn').addEventListener('click', openReset);
   }
+
+  // ---------- reset this teacher's password (admin only) ----------
+  // The page already sends anyone who is not an admin away, so reaching this
+  // button at all means the caller is one.
+  const resetOverlay = document.getElementById('resetOverlay');
+  function openReset(){ resetOverlay.classList.add('open'); }
+  document.getElementById('resetCancelBtn').addEventListener('click', () => resetOverlay.classList.remove('open'));
+
+  document.getElementById('resetConfirmBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('resetConfirmBtn');
+    btn.disabled = true;
+    try{
+      const res = await fetch(TEACHERS_URL + '/' + employeeId + '/reset-password', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', ...authHeaders() }
+      });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch { throw new Error('Server sent back an error page (HTTP ' + res.status + '). Reload and try again.'); }
+      if (!res.ok) throw new Error(data.error || 'Could not reset the password');
+      resetOverlay.classList.remove('open');
+      toast('Password reset to ' + data.password, 'good');
+    }catch(err){
+      toast(err.message, 'bad');
+    }finally{
+      btn.disabled = false;
+    }
+  });
 
   function renderEdit(){
     const deptOptions = (departments.length ? departments : [employee.dept])

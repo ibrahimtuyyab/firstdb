@@ -192,6 +192,18 @@
   </div>
 </div>
 
+<!-- reset password confirm -->
+<div class="overlay" id="resetOverlay">
+  <div class="modal">
+    <h2>Reset this student's password?</h2>
+    <p class="sub" id="resetSub">Their password goes back to the default for students. Anything they had chosen themselves stops working, and they can set a new one after logging in.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="resetCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="resetConfirmBtn">Reset password</button>
+    </div>
+  </div>
+</div>
+
 <!-- delete confirm -->
 <div class="overlay" id="deleteOverlay">
   <div class="modal">
@@ -349,6 +361,15 @@
         </button>`);
       document.getElementById('editBtn').addEventListener('click', renderEdit);
     }
+    // Only an admin can hand out a fresh password - see openReset.
+    if (isAdmin) {
+      actions.insertAdjacentHTML('beforeend', `
+        <button class="btn btn-ghost" id="resetPwBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Reset password
+        </button>`);
+      document.getElementById('resetPwBtn').addEventListener('click', openReset);
+    }
     if (canDelete) {
       actions.insertAdjacentHTML('beforeend', `
         <button class="btn btn-danger" id="deleteBtn">
@@ -358,6 +379,33 @@
       document.getElementById('deleteBtn').addEventListener('click', openDelete);
     }
   }
+
+  // ---------- reset this student's password (admin only) ----------
+  const resetOverlay = document.getElementById('resetOverlay');
+  function openReset(){ resetOverlay.classList.add('open'); }
+  document.getElementById('resetCancelBtn').addEventListener('click', () => resetOverlay.classList.remove('open'));
+
+  document.getElementById('resetConfirmBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('resetConfirmBtn');
+    btn.disabled = true;
+    try{
+      const res = await fetch(API_URL + '/' + personId + '/reset-password', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token }
+      });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch { throw new Error('Server sent back an error page (HTTP ' + res.status + '). Reload and try again.'); }
+      if (!res.ok) throw new Error(data.error || 'Could not reset the password');
+      resetOverlay.classList.remove('open');
+      toast('Password reset to ' + data.password, 'good');
+    }catch(err){
+      toast(err.message, 'bad');
+    }finally{
+      btn.disabled = false;
+    }
+  });
 
   function renderEdit(){
     document.getElementById('host').innerHTML = `
