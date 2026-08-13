@@ -71,84 +71,113 @@ const PASSWORD_STORE = {
   [ROLES.STUDENT]: { table: 'items', key: (user) => user.itemId, fallback: () => DEFAULT_STUDENT_PASSWORD },
 };
 
-// ---------------------------------------------------------------- login ----
-app.post('/api/login', async (req, res) => {
+// --------------------------------------------------- login role guard ----
+// Each role proves who it is from a different table: an admin by username in
+// users, a teacher by employee no + department in teachers, a student by id or
+// roll no in items. So "is this person allowed to sign in as this role?" is a
+// question that can be answered before any password is looked at.
+//
+// authorizeLoginRole does exactly that and nothing else. It rejects an unknown
+// role, rejects a request missing the fields that role needs, and rejects a
+// person who is not registered under the role they picked - a student id typed
+// into the teacher form never reaches the password check. What it finds is left
+// on req.account so the login handler does not query for it a second time.
+const ROLE_GUARDS = {
+  [ROLES.ADMIN]: {
+    required: ['username', 'password'],
+    requiredError: 'Username and password are required',
+    find: (body) => pool.query(
+      'SELECT id, username, password FROM users WHERE username = $1',
+      [String(body.username).trim()]
+    ),
+    // Deliberately vague: admin usernames should not be discoverable by
+    // watching which ones come back "not found".
+    notFound: 'Invalid username or password',
+  },
+  [ROLES.TEACHER]: {
+    required: ['employeeNo', 'dept', 'password'],
+    requiredError: 'Employee no, department and password are required',
+    find: (body) => pool.query(
+      'SELECT id, employee_no, name, dept, password FROM teachers WHERE employee_no = $1 AND dept = $2',
+      [String(body.employeeNo).trim(), body.dept]
+    ),
+    notFound: 'No teacher found with that employee no in that department',
+  },
+  [ROLES.STUDENT]: {
+    required: ['studentId', 'password'],
+    requiredError: 'Id no and password are required',
+    find: (body) => pool.query(
+      'SELECT id, name, dept, password FROM items WHERE id::text = $1 OR roll_no = $1',
+      [String(body.studentId).trim()]
+    ),
+    notFound: 'No student found with that id no',
+  },
+};
+
+async function authorizeLoginRole(req, res, next) {
   const role = String(req.body.role || '').toLowerCase();
-  const { password } = req.body;
+  const guard = ROLE_GUARDS[role];
+  if (!guard) return res.status(400).json({ error: 'Unknown role' });
+
+  if (guard.required.some((field) => !req.body[field])) {
+    return res.status(400).json({ error: guard.requiredError });
+  }
 
   try {
-    if (role === ROLES.ADMIN) {
-      const { username } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password are required' });
-      }
-      const result = await pool.query(
-        'SELECT id, username, password FROM users WHERE username = $1',
-        [username]
-      );
-      const admin = result.rows[0];
-      if (!admin || !(await bcrypt.compare(password, admin.password))) {
+    const result = await guard.find(req.body);
+    const account = result.rows[0];
+    if (!account) return res.status(401).json({ error: guard.notFound });
+
+    req.loginRole = role;
+    req.account = account;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ---------------------------------------------------------------- login ----
+// By the time this runs the role guard has already found the account, so all
+// that is left is the password and the token.
+app.post('/api/login', authorizeLoginRole, async (req, res) => {
+  const { password } = req.body;
+  const account = req.account;
+
+  try {
+    if (req.loginRole === ROLES.ADMIN) {
+      if (!(await bcrypt.compare(password, account.password))) {
         return res.status(401).json({ error: 'Invalid username or password' });
       }
       return res.json(issueToken({
         role: ROLES.ADMIN,
-        id: admin.id,
-        username: admin.username,
-        displayName: admin.username,
+        id: account.id,
+        username: account.username,
+        displayName: account.username,
       }));
     }
 
-    if (role === ROLES.TEACHER) {
-      const { employeeNo, dept } = req.body;
-      if (!employeeNo || !dept || !password) {
-        return res.status(400).json({ error: 'Employee no, department and password are required' });
-      }
-      const result = await pool.query(
-        'SELECT id, employee_no, name, dept, password FROM teachers WHERE employee_no = $1 AND dept = $2',
-        [String(employeeNo).trim(), dept]
-      );
-      const teacher = result.rows[0];
-      if (!teacher) {
-        return res.status(401).json({ error: 'No teacher found with that employee no in that department' });
-      }
-      if (!(await verifyPassword(password, teacher.password, DEFAULT_TEACHER_PASSWORD))) {
+    if (req.loginRole === ROLES.TEACHER) {
+      if (!(await verifyPassword(password, account.password, DEFAULT_TEACHER_PASSWORD))) {
         return res.status(401).json({ error: 'Incorrect password' });
       }
       return res.json(issueToken({
         role: ROLES.TEACHER,
-        id: teacher.id,
-        employeeNo: teacher.employee_no,
-        dept: teacher.dept,
-        displayName: teacher.name,
+        id: account.id,
+        employeeNo: account.employee_no,
+        dept: account.dept,
+        displayName: account.name,
       }));
     }
 
-    if (role === ROLES.STUDENT) {
-      const { studentId } = req.body;
-      if (!studentId || !password) {
-        return res.status(400).json({ error: 'Id no and password are required' });
-      }
-      const key = String(studentId).trim();
-      const result = await pool.query(
-        'SELECT id, name, dept, password FROM items WHERE id::text = $1 OR roll_no = $1',
-        [key]
-      );
-      const student = result.rows[0];
-      if (!student) {
-        return res.status(401).json({ error: 'No student found with that id no' });
-      }
-      if (!(await verifyPassword(password, student.password, DEFAULT_STUDENT_PASSWORD))) {
-        return res.status(401).json({ error: 'Incorrect password' });
-      }
-      return res.json(issueToken({
-        role: ROLES.STUDENT,
-        itemId: student.id,
-        dept: student.dept,
-        displayName: student.name,
-      }));
+    if (!(await verifyPassword(password, account.password, DEFAULT_STUDENT_PASSWORD))) {
+      return res.status(401).json({ error: 'Incorrect password' });
     }
-
-    return res.status(400).json({ error: 'Unknown role' });
+    return res.json(issueToken({
+      role: ROLES.STUDENT,
+      itemId: account.id,
+      dept: account.dept,
+      displayName: account.name,
+    }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
