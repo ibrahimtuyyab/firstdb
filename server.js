@@ -21,6 +21,15 @@ const pool = new Pool(require('./db-config')());
 // A pool error must not take the whole process down.
 pool.on('error', (err) => console.error('pg pool error:', err.message));
 
+// Every query below names its tables unqualified, so the connection must be
+// able to see the public schema. A pooled connection can arrive with an empty
+// search_path, so set it rather than trusting the server default.
+pool.on('connect', (client) => {
+  client.query('SET search_path TO public').catch((err) =>
+    console.error('could not set search_path:', err.message)
+  );
+});
+
 // ---------------------------------------------------------------- roles ----
 // admin   - username + password. Sees and edits everything.
 // teacher - employee no + department + shared password. Sees, adds and edits
