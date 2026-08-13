@@ -16,23 +16,7 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Hosted Postgres (Neon, Supabase, Vercel Postgres) hands out a single
-// connection string and requires TLS; local dev still uses the DB_* vars.
-const pool = new Pool(
-  process.env.DATABASE_URL
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-        max: 1,
-      }
-    : {
-        user: process.env.DB_USER,
-        host: process.env.DB_HOST,
-        database: process.env.DB_NAME,
-        password: process.env.DB_PASSWORD,
-        port: process.env.DB_PORT,
-      }
-);
+const pool = new Pool(require('./db-config')());
 
 // A pool error must not take the whole process down.
 pool.on('error', (err) => console.error('pg pool error:', err.message));

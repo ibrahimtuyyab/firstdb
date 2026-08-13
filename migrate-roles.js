@@ -10,13 +10,10 @@ require('dotenv').config();
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
+const dbConfig = require('./db-config');
+
+// Set DATABASE_URL to run this against the hosted database instead of local.
+const pool = new Pool(dbConfig());
 
 // One teacher seeded per department that exists in items.
 const TEACHER_SEED = [
