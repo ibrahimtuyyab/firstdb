@@ -15,7 +15,7 @@ const HOSTED_URL_VARS = [
 ];
 
 module.exports = function dbConfig() {
-  const name = HOSTED_URL_VARS.find((v) => process.env[v]);
+  const name = module.exports.chosenVar();
   if (name) {
     return {
       connectionString: process.env[name],
@@ -30,4 +30,19 @@ module.exports = function dbConfig() {
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT,
   };
+};
+
+// Which variable won, and where it points with the credentials stripped out.
+// Used by the /api/_diag route to tell one database from another.
+module.exports.chosenVar = () => HOSTED_URL_VARS.find((v) => process.env[v]);
+
+module.exports.describe = () => {
+  const name = module.exports.chosenVar();
+  if (!name) return { source: 'DB_* vars', host: process.env.DB_HOST, database: process.env.DB_NAME };
+  try {
+    const u = new URL(process.env[name]);
+    return { source: name, host: u.hostname, database: u.pathname.replace('/', '') };
+  } catch {
+    return { source: name, host: 'unparseable', database: null };
+  }
 };
