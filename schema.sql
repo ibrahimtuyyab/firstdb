@@ -36,7 +36,8 @@ CREATE TABLE public.items (
     roll_no character varying(50),
     class character varying(50),
     batch character varying(50),
-    photo text
+    photo text,
+    password character varying(255)
 );
 
 
@@ -54,7 +55,8 @@ CREATE TABLE public.teachers (
     contact_no character varying(40),
     qualification character varying(120),
     joined_on character varying(20),
-    photo text
+    photo text,
+    password character varying(255)
 );
 
 

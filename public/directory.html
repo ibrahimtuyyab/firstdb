@@ -263,6 +263,10 @@
             <strong id="dropdownUsername">—</strong>
             <span class="role-badge" id="dropdownRole" style="margin-top:8px;">—</span>
           </div>
+          <button id="changePasswordBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Change password
+          </button>
           <button class="danger-item" id="deleteAllBtn" style="display:none;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
             Delete all students
@@ -419,6 +423,33 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="deleteAllCancelBtn">Cancel</button>
         <button type="submit" class="btn btn-destroy" id="deleteAllConfirmBtn">Delete everything</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- change my own password -->
+<div class="overlay" id="passwordOverlay">
+  <div class="modal">
+    <h2>Change password</h2>
+    <p class="sub">Enter your current password, then the new one twice. Only your own login is affected.</p>
+    <form id="passwordForm">
+      <div class="field">
+        <label>Current password</label>
+        <input type="password" id="currentPassword" required autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label>New password</label>
+        <input type="password" id="newPassword" required autocomplete="new-password" minlength="6">
+      </div>
+      <div class="field">
+        <label>Confirm new password</label>
+        <input type="password" id="newPassword2" required autocomplete="new-password" minlength="6">
+        <p class="field-error" id="passwordError"></p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="passwordCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="passwordSaveBtn">Change password</button>
       </div>
     </form>
   </div>
@@ -830,6 +861,55 @@
     }finally{
       importBtn.disabled = false;
       csvInput.value = '';
+    }
+  });
+
+  // ---------- change my own password (every role) ----------
+  const passwordOverlay = document.getElementById('passwordOverlay');
+  const passwordError = document.getElementById('passwordError');
+
+  document.getElementById('changePasswordBtn').addEventListener('click', () => {
+    userDropdown.classList.remove('open');
+    document.getElementById('passwordForm').reset();
+    passwordError.classList.remove('show');
+    passwordOverlay.classList.add('open');
+  });
+  document.getElementById('passwordCancelBtn').addEventListener('click', () => passwordOverlay.classList.remove('open'));
+
+  document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('passwordSaveBtn');
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('newPassword2').value;
+    passwordError.classList.remove('show');
+
+    // Caught here as well as on the server so the mistake is obvious at once.
+    if (newPassword !== confirmPassword) {
+      passwordError.textContent = 'The two new passwords do not match';
+      passwordError.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    try{
+      const res = await fetch(API + '/change-password', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          oldPassword: document.getElementById('currentPassword').value,
+          newPassword,
+          confirmPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not change password');
+      passwordOverlay.classList.remove('open');
+      toast('Password changed', 'good');
+    }catch(err){
+      passwordError.textContent = err.message;
+      passwordError.classList.add('show');
+    }finally{
+      btn.disabled = false;
     }
   });
 

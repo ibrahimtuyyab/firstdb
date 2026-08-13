@@ -32,13 +32,44 @@ pool.on('connect', (client) => {
 
 // ---------------------------------------------------------------- roles ----
 // admin   - username + password. Sees and edits everything.
-// teacher - employee no + department + shared password. Sees, adds and edits
+// teacher - employee no + department + own password. Sees, adds and edits
 //           only the students of their own department. Cannot delete.
-// student - id/roll no + shared password. Sees only their own record.
+// student - id/roll no + own password. Sees only their own record.
 const ROLES = { ADMIN: 'admin', TEACHER: 'teacher', STUDENT: 'student' };
 
-// Teachers and students all share one password (see migrate-roles.js).
-const SHARED_PASSWORD = process.env.SHARED_PASSWORD || '1234';
+// ------------------------------------------------------------- passwords ----
+// Every person has their own bcrypt hash: admins in users.password, teachers in
+// teachers.password, students in items.password. New teachers and students
+// start on their role's default and can change it from their own page.
+const BCRYPT_ROUNDS = 10;
+const MIN_PASSWORD_LENGTH = 6;
+const DEFAULT_TEACHER_PASSWORD = process.env.DEFAULT_TEACHER_PASSWORD || 'teacher1234';
+const DEFAULT_STUDENT_PASSWORD = process.env.DEFAULT_STUDENT_PASSWORD || 'student1234';
+
+// A row can still be missing its hash - it was imported from CSV before the
+// password column existed, or migrate-passwords.js has not been run yet. Fall
+// back to the role default so nobody is locked out of their own record.
+function verifyPassword(plain, hash, roleDefault) {
+  if (hash) return bcrypt.compare(plain, hash);
+  return Promise.resolve(plain === roleDefault);
+}
+
+// The teachers and items rows now carry a password hash, and several routes
+// select or return whole rows. Strip it on the way out - a hash is still a
+// credential and has no business reaching the browser.
+function withoutPassword(row) {
+  if (!row) return row;
+  const { password, ...rest } = row;
+  return rest;
+}
+const withoutPasswords = (rows) => rows.map(withoutPassword);
+
+// Where each role's password lives, so one route can serve all three.
+const PASSWORD_STORE = {
+  [ROLES.ADMIN]: { table: 'users', key: (user) => user.id },
+  [ROLES.TEACHER]: { table: 'teachers', key: (user) => user.id, fallback: () => DEFAULT_TEACHER_PASSWORD },
+  [ROLES.STUDENT]: { table: 'items', key: (user) => user.itemId, fallback: () => DEFAULT_STUDENT_PASSWORD },
+};
 
 // ---------------------------------------------------------------- login ----
 app.post('/api/login', async (req, res) => {
@@ -72,16 +103,16 @@ app.post('/api/login', async (req, res) => {
       if (!employeeNo || !dept || !password) {
         return res.status(400).json({ error: 'Employee no, department and password are required' });
       }
-      if (password !== SHARED_PASSWORD) {
-        return res.status(401).json({ error: 'Incorrect password' });
-      }
       const result = await pool.query(
-        'SELECT id, employee_no, name, dept FROM teachers WHERE employee_no = $1 AND dept = $2',
+        'SELECT id, employee_no, name, dept, password FROM teachers WHERE employee_no = $1 AND dept = $2',
         [String(employeeNo).trim(), dept]
       );
       const teacher = result.rows[0];
       if (!teacher) {
         return res.status(401).json({ error: 'No teacher found with that employee no in that department' });
+      }
+      if (!(await verifyPassword(password, teacher.password, DEFAULT_TEACHER_PASSWORD))) {
+        return res.status(401).json({ error: 'Incorrect password' });
       }
       return res.json(issueToken({
         role: ROLES.TEACHER,
@@ -97,17 +128,17 @@ app.post('/api/login', async (req, res) => {
       if (!studentId || !password) {
         return res.status(400).json({ error: 'Id no and password are required' });
       }
-      if (password !== SHARED_PASSWORD) {
-        return res.status(401).json({ error: 'Incorrect password' });
-      }
       const key = String(studentId).trim();
       const result = await pool.query(
-        'SELECT id, name, dept FROM items WHERE id::text = $1 OR roll_no = $1',
+        'SELECT id, name, dept, password FROM items WHERE id::text = $1 OR roll_no = $1',
         [key]
       );
       const student = result.rows[0];
       if (!student) {
         return res.status(401).json({ error: 'No student found with that id no' });
+      }
+      if (!(await verifyPassword(password, student.password, DEFAULT_STUDENT_PASSWORD))) {
+        return res.status(401).json({ error: 'Incorrect password' });
       }
       return res.json(issueToken({
         role: ROLES.STUDENT,
@@ -165,6 +196,51 @@ app.get('/api/me', requireAuth, (req, res) => {
   res.json({ role, username, employeeNo, dept, itemId, displayName });
 });
 
+// Change my own password. Works the same for all three roles - the old
+// password must be given again even though the caller is already logged in,
+// so a walked-away-from session cannot be used to lock the owner out.
+app.post('/api/change-password', requireAuth, async (req, res) => {
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ error: 'Current password, new password and confirmation are all required' });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'The two new passwords do not match' });
+  }
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+  }
+  if (newPassword === oldPassword) {
+    return res.status(400).json({ error: 'New password must be different from the current one' });
+  }
+
+  const store = PASSWORD_STORE[req.user.role];
+  const id = store && store.key(req.user);
+  if (!store || id === undefined || id === null) {
+    return res.status(400).json({ error: 'This account cannot change its password' });
+  }
+
+  try {
+    const existing = await pool.query(
+      `SELECT password FROM ${store.table} WHERE id = $1`,
+      [id]
+    );
+    if (!existing.rows[0]) return res.status(404).json({ error: 'Account not found' });
+
+    const roleDefault = store.fallback ? store.fallback() : null;
+    if (!(await verifyPassword(oldPassword, existing.rows[0].password, roleDefault))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.query(`UPDATE ${store.table} SET password = $1 WHERE id = $2`, [hash, id]);
+    res.json({ message: 'Password changed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Department list, used by the teacher login form.
 app.get('/api/departments', async (req, res) => {
   try {
@@ -186,7 +262,7 @@ const EMPLOYEE_FIELDS = ['name', 'dept', 'designation', 'email', 'contact_no', '
 app.get('/api/teachers', requireAuth, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM teachers ORDER BY employee_no');
-    res.json(result.rows);
+    res.json(withoutPasswords(result.rows));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -196,7 +272,7 @@ app.get('/api/teachers/:id', requireAuth, requireRole(ROLES.ADMIN), async (req, 
   try {
     const result = await pool.query('SELECT * FROM teachers WHERE id = $1', [req.params.id]);
     if (!result.rows[0]) return res.status(404).json({ error: 'Employee not found' });
-    res.json(result.rows[0]);
+    res.json(withoutPassword(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -209,14 +285,15 @@ app.post('/api/teachers', requireAuth, requireRole(ROLES.ADMIN), async (req, res
   }
   try {
     const result = await pool.query(
-      `INSERT INTO teachers (employee_no, name, dept, designation, email, contact_no, qualification, joined_on, photo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      `INSERT INTO teachers (employee_no, name, dept, designation, email, contact_no, qualification, joined_on, photo, password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [
         String(employee_no).trim(), name, dept, req.body.designation, req.body.email,
-        req.body.contact_no, req.body.qualification, req.body.joined_on, req.body.photo
+        req.body.contact_no, req.body.qualification, req.body.joined_on, req.body.photo,
+        await bcrypt.hash(DEFAULT_TEACHER_PASSWORD, BCRYPT_ROUNDS)
       ]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(withoutPassword(result.rows[0]));
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'That employee no is already in use' });
@@ -245,7 +322,7 @@ app.put('/api/teachers/:id', requireAuth, requireRole(ROLES.ADMIN), async (req, 
         next.contact_no, next.qualification, next.joined_on, next.photo, req.params.id
       ]
     );
-    res.json(result.rows[0]);
+    res.json(withoutPassword(result.rows[0]));
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'That employee no is already in use' });
@@ -267,6 +344,9 @@ app.post('/api/teachers/import', requireAuth, requireRole(ROLES.ADMIN), upload.s
       let inserted = 0;
       let skipped = 0;
       const errors = [];
+      // One hash for the whole file - they all start on the same default, and
+      // bcrypt per row would take about a minute on a large import.
+      const defaultHash = await bcrypt.hash(DEFAULT_TEACHER_PASSWORD, BCRYPT_ROUNDS);
 
       for (const row of rows) {
         const employeeNo = (row.employee_no || row.employeeNo || '').trim();
@@ -277,13 +357,13 @@ app.post('/api/teachers/import', requireAuth, requireRole(ROLES.ADMIN), upload.s
         }
         try {
           const result = await pool.query(
-            `INSERT INTO teachers (employee_no, name, dept, designation, email, contact_no, qualification, joined_on)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+            `INSERT INTO teachers (employee_no, name, dept, designation, email, contact_no, qualification, joined_on, password)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
              ON CONFLICT (employee_no) DO NOTHING
              RETURNING id`,
             [
               employeeNo, row.name, row.dept, row.designation, row.email,
-              row.contact_no, row.qualification, row.joined_on
+              row.contact_no, row.qualification, row.joined_on, defaultHash
             ]
           );
           if (result.rowCount) inserted++;
@@ -318,17 +398,17 @@ app.get('/api/items', requireAuth, async (req, res) => {
   try {
     if (req.user.role === ROLES.STUDENT) {
       const own = await pool.query('SELECT * FROM items WHERE id = $1', [req.user.itemId]);
-      return res.json(own.rows);
+      return res.json(withoutPasswords(own.rows));
     }
     if (req.user.role === ROLES.TEACHER) {
       const mine = await pool.query(
         'SELECT * FROM items WHERE dept = $1 ORDER BY id',
         [req.user.dept]
       );
-      return res.json(mine.rows);
+      return res.json(withoutPasswords(mine.rows));
     }
     const result = await pool.query('SELECT * FROM items ORDER BY id');
-    res.json(result.rows);
+    res.json(withoutPasswords(result.rows));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -343,7 +423,7 @@ app.get('/api/items/:id', requireAuth, async (req, res) => {
     if (!canAccessItem(req.user, item)) {
       return res.status(403).json({ error: 'You do not have access to that record' });
     }
-    res.json(item);
+    res.json(withoutPassword(item));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -358,11 +438,14 @@ app.post('/api/items', requireAuth, requireRole(ROLES.ADMIN, ROLES.TEACHER), asy
 
   try {
     const result = await pool.query(
-      `INSERT INTO items (name, id, email, dept, father_name, contact_no, roll_no, class, batch, photo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [name, id, email, dept, father_name, contact_no, roll_no, className, batch, photo]
+      `INSERT INTO items (name, id, email, dept, father_name, contact_no, roll_no, class, batch, photo, password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [
+        name, id, email, dept, father_name, contact_no, roll_no, className, batch, photo,
+        await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS)
+      ]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(withoutPassword(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -386,7 +469,7 @@ app.put('/api/items/:id', requireAuth, requireRole(ROLES.ADMIN, ROLES.TEACHER), 
        roll_no=$6, class=$7, batch=$8, photo=$9 WHERE id=$10 RETURNING *`,
       [name, email, dept, father_name, contact_no, roll_no, className, batch, photo, req.params.id]
     );
-    res.json(result.rows[0]);
+    res.json(withoutPassword(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -405,6 +488,9 @@ app.post('/api/items/import', requireAuth, requireRole(ROLES.ADMIN, ROLES.TEACHE
     .on('end', async () => {
       let inserted = 0;
       let skipped = 0;
+      // See the employee import - one hash for the whole file.
+      const defaultHash = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS);
+
       for (const row of results) {
         // A teacher's import is filed under their department whatever the CSV says.
         const dept = req.user.role === ROLES.TEACHER ? req.user.dept : row.dept;
@@ -415,13 +501,13 @@ app.post('/api/items/import', requireAuth, requireRole(ROLES.ADMIN, ROLES.TEACHE
         }
         try {
           const result = await pool.query(
-            `INSERT INTO items (id, name, email, dept, father_name, contact_no, roll_no, class, batch)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            `INSERT INTO items (id, name, email, dept, father_name, contact_no, roll_no, class, batch, password)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
              ON CONFLICT (id) DO NOTHING
              RETURNING id`,
             [
               row.id, row.name, row.email, dept,
-              row.father_name, row.contact_no, row.roll_no, row.class, row.batch
+              row.father_name, row.contact_no, row.roll_no, row.class, row.batch, defaultHash
             ]
           );
           if (result.rowCount) inserted++;
