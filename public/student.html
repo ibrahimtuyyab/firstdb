@@ -86,6 +86,19 @@
   }
   .field-error.show{ display:block; }
 
+  /* show / hide the typed password */
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:44px; }
+  .pw-eye{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    background:none; border:none; padding:6px; cursor:pointer; border-radius:6px;
+    color:var(--text-dim); display:flex; align-items:center; transition:color .2s ease;
+  }
+  .pw-eye:hover{ color:var(--amber); }
+  .pw-eye .eye-off{ display:none; }
+  .pw-eye.on .eye{ display:none; }
+  .pw-eye.on .eye-off{ display:block; }
+
   @keyframes cardIn{
     from{ opacity:0; transform:translateY(18px); }
     to{ opacity:1; transform:translateY(0); }
@@ -187,15 +200,15 @@
     <form id="passwordForm">
       <div class="field">
         <label>Current password</label>
-        <input type="password" id="currentPassword" required autocomplete="current-password">
+        <div class="pw-wrap"><input type="password" id="currentPassword" required autocomplete="current-password"><button type="button" class="pw-eye" data-for="currentPassword" aria-label="Show password" tabindex="-1"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
       </div>
       <div class="field">
         <label>New password</label>
-        <input type="password" id="newPassword" required autocomplete="new-password" minlength="6">
+        <div class="pw-wrap"><input type="password" id="newPassword" required autocomplete="new-password" minlength="6"><button type="button" class="pw-eye" data-for="newPassword" aria-label="Show password" tabindex="-1"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
       </div>
       <div class="field">
         <label>Confirm new password</label>
-        <input type="password" id="newPassword2" required autocomplete="new-password" minlength="6">
+        <div class="pw-wrap"><input type="password" id="newPassword2" required autocomplete="new-password" minlength="6"><button type="button" class="pw-eye" data-for="newPassword2" aria-label="Show password" tabindex="-1"><svg class="eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
         <p class="field-error" id="passwordError"></p>
       </div>
       <div class="modal-actions">
@@ -224,6 +237,18 @@
     window.location.replace('login.html');
   }
   document.getElementById('logoutBtn').addEventListener('click', forceLogout);
+
+  // Eye button inside a password field: flip the input between password and
+  // text. data-for names the input it belongs to.
+  document.querySelectorAll('.pw-eye').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.for);
+      const reveal = input.type === 'password';
+      input.type = reveal ? 'text' : 'password';
+      btn.classList.toggle('on', reveal);
+      btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+    });
+  });
 
   // ---------- change my own password ----------
   const passwordOverlay = document.getElementById('passwordOverlay');
@@ -261,7 +286,12 @@
           confirmPassword
         })
       });
-      const data = await res.json();
+      // A stale server (or a bad deploy) answers with an HTML error page, and
+      // res.json() would blow up with an unhelpful "invalid JSON" message.
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch { throw new Error('Server sent back an error page (HTTP ' + res.status + '). Reload the page and try again.'); }
       if (!res.ok) throw new Error(data.error || 'Could not change password');
       passwordOverlay.classList.remove('open');
       alert('Password changed. Use your new password next time you log in.');

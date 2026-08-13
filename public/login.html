@@ -205,6 +205,17 @@
     box-shadow:0 0 0 4px rgba(232,163,61,0.1);
   }
   .input-wrap:focus-within > svg{ color:var(--amber); }
+  /* show / hide the typed password */
+  .input-wrap.with-eye input{ padding-right:50px; }
+  .pw-eye{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    background:none; border:none; padding:7px; cursor:pointer; border-radius:7px;
+    color:var(--text-dim); display:flex; align-items:center; transition:color .2s ease;
+  }
+  .pw-eye:hover{ color:var(--amber); }
+  .pw-eye .eye-off{ display:none; }
+  .pw-eye.on .eye{ display:none; }
+  .pw-eye.on .eye-off{ display:block; }
   .chev{
     position:absolute; right:16px; top:50%; transform:translateY(-50%);
     color:var(--text-dim); pointer-events:none;
@@ -346,9 +357,13 @@
       <!-- shared password field -->
       <div class="field">
         <label>Password</label>
-        <div class="input-wrap">
+        <div class="input-wrap with-eye">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           <input type="password" id="password" autocomplete="current-password" required>
+          <button type="button" class="pw-eye" data-for="password" aria-label="Show password" tabindex="-1">
+            <svg class="eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
         </div>
       </div>
 
@@ -366,6 +381,18 @@
 
 <script>
   const API = window.location.origin + '/api';
+
+  // Eye button inside a password field: flip the input between password and
+  // text. data-for names the input it belongs to.
+  document.querySelectorAll('.pw-eye').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.for);
+      const reveal = input.type === 'password';
+      input.type = reveal ? 'text' : 'password';
+      btn.classList.toggle('on', reveal);
+      btn.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+    });
+  });
   const form = document.getElementById('loginForm');
   const errorMsg = document.getElementById('errorMsg');
   const errorText = document.getElementById('errorText');
