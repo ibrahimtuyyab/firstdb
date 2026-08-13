@@ -16,8 +16,7 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const dbConfig = require('./db-config');
-const pool = new Pool(dbConfig());
+const pool = new Pool(require('./db-config')());
 
 // A pool error must not take the whole process down.
 pool.on('error', (err) => console.error('pg pool error:', err.message));
@@ -29,37 +28,6 @@ pool.on('connect', (client) => {
   client.query('SET search_path TO public').catch((err) =>
     console.error('could not set search_path:', err.message)
   );
-});
-
-// TEMPORARY - says which database this deployment is actually talking to and
-// what it can see there. No credentials are returned. Delete once login works.
-const BUILD_MARKER = 'diag-1';
-
-app.get('/api/_diag', async (req, res) => {
-  const out = {
-    build: BUILD_MARKER,
-    db: dbConfig.describe(),
-    envPresent: {
-      DATABASE_URL: !!process.env.DATABASE_URL,
-      DATABASE_URL_UNPOOLED: !!process.env.DATABASE_URL_UNPOOLED,
-      POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING,
-      JWT_SECRET: !!process.env.JWT_SECRET,
-      SHARED_PASSWORD: !!process.env.SHARED_PASSWORD,
-    },
-  };
-  try {
-    const info = await pool.query(
-      "select current_database() as db, current_setting('search_path') as search_path, current_user as usr"
-    );
-    out.connected = info.rows[0];
-    const tables = await pool.query(
-      "select schemaname, tablename from pg_tables where schemaname not in ('pg_catalog','information_schema') order by 1,2"
-    );
-    out.tables = tables.rows.map((r) => `${r.schemaname}.${r.tablename}`);
-  } catch (err) {
-    out.dbError = err.message;
-  }
-  res.json(out);
 });
 
 // ---------------------------------------------------------------- roles ----
